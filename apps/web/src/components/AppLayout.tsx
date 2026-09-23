@@ -15,7 +15,7 @@ const navItems = [
   { to: "/assets", icon: PackageSearch, label: "nav.assets", prefetch: "/api/assets" },
   { to: "/categories", icon: Tags, label: "nav.categories", prefetch: "/api/categories" },
   { to: "/locations", icon: MapPin, label: "nav.locations", prefetch: "/api/locations" },
-  { to: "/settings", icon: Settings, label: "nav.settings" },
+  { to: "/settings", icon: Settings, label: "nav.settings", prefetch: undefined },
 ] as const;
 
 export function AppLayout() {
