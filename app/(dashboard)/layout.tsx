@@ -30,6 +30,7 @@ export default async function DashboardLayout({
             assets: t("nav.assets"),
             categories: t("nav.categories"),
             locations: t("nav.locations"),
+            employees: t("nav.employees"),
             settings: t("nav.settings"),
           }}
         />
