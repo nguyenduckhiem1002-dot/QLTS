@@ -4,9 +4,9 @@ export function isDemoMode() {
   if (configuredMode === "true") return true;
   if (configuredMode === "false") return false;
 
-  // Vercel is used as a public UI preview. The self-hosted deployment keeps
-  // using PostgreSQL unless demo mode is explicitly enabled.
-  return process.env.VERCEL === "1" || !process.env.DATABASE_URL;
+  // Use the real database whenever DATABASE_URL is available, including Vercel.
+  // Demo mode is now only a fallback for environments without a database.
+  return !process.env.DATABASE_URL;
 }
 
 export function hasDatabaseUrl() {
