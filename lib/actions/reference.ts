@@ -46,3 +46,31 @@ export async function createLocation(formData: FormData) {
   revalidatePath("/locations");
   revalidatePath("/assets/new");
 }
+
+export async function createEmployee(formData: FormData) {
+  const employeeCode = value(formData, "employeeCode");
+  const name = value(formData, "name");
+  const email = value(formData, "email") || null;
+  const department = value(formData, "department") || null;
+
+  if (!employeeCode || !name) return;
+
+  const existing = await db.employee.findUnique({
+    where: { employeeCode },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await db.employee.update({
+      where: { id: existing.id },
+      data: { name, email, department },
+    });
+  } else {
+    await db.employee.create({
+      data: { employeeCode, name, email, department },
+    });
+  }
+
+  revalidatePath("/employees");
+  revalidatePath("/assets");
+}
