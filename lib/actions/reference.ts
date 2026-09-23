@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { isDemoMode } from "@/lib/runtime";
+import { requirePermission } from "@/lib/auth/session";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
 export async function createCategory(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("reference:write");
   if (isDemoMode()) redirect("/categories?demo=readonly");
 
   const name = value(formData, "name");
@@ -30,6 +32,7 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function createLocation(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("reference:write");
   if (isDemoMode()) redirect("/locations?demo=readonly");
 
   const name = value(formData, "name");
@@ -54,6 +57,7 @@ export async function createLocation(formData: FormData) {
 }
 
 export async function createEmployee(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("reference:write");
   if (isDemoMode()) redirect("/employees?demo=readonly");
 
   const employeeCode = value(formData, "employeeCode");

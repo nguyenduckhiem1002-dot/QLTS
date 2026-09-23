@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { getLocale } from "@/lib/i18n";
+import { getTranslations } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,10 +17,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "QLTS",
-    template: "%s | QLTS",
+    default: "Casla Assets",
+    template: "%s | Casla Assets",
   },
-  description: "Hệ thống quản lý tài sản nội bộ",
+  description: "Hệ thống quản lý tài sản nội bộ Casla",
+  icons: {
+    icon: "/casla-mark.svg",
+  },
 };
 
 export default async function RootLayout({
@@ -28,13 +31,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
+  const { locale, t } = await getTranslations();
 
   return (
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <a className="skip-link" href="#main-content">
-          Skip to content
+          {t("common.skipToContent")}
         </a>
         {children}
       </body>

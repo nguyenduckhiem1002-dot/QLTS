@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { isDemoMode } from "@/lib/runtime";
+import { requirePermission } from "@/lib/auth/session";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -16,6 +17,7 @@ function optional(formData: FormData, key: string) {
 }
 
 export async function createAsset(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("assets:write");
   if (isDemoMode()) redirect("/assets?demo=readonly");
 
   const code = value(formData, "code");
@@ -66,6 +68,7 @@ export async function createAsset(formData: FormData) {
 }
 
 export async function assignAsset(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
   if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
 
@@ -110,6 +113,7 @@ export async function assignAsset(formData: FormData) {
 }
 
 export async function returnAsset(formData: FormData) {
+  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
   if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
   if (!assetId) return;
