@@ -160,12 +160,14 @@ Các module tiếp theo nên phát triển độc lập trên foundation này:
 
 ## Chế độ database / demo
 
-QLTS ưu tiên dùng PostgreSQL thật ở mọi môi trường, bao gồm Vercel.
+QLTS dùng PostgreSQL thật cho self-host và Vercel Production khi có `DATABASE_URL`.
 
-- Nếu có `DATABASE_URL`: ứng dụng dùng database thật.
-- Nếu không có `DATABASE_URL`: ứng dụng tự fallback sang demo read-only.
+- Self-host / Vercel Production có `DATABASE_URL`: ứng dụng dùng database thật.
+- Vercel Preview mặc định chạy demo read-only để PR không ghi nhầm vào database production.
+- Nếu không có `DATABASE_URL`: ứng dụng fallback sang demo read-only.
 - Đặt `QLTS_DEMO_MODE=true` để chủ động ép demo.
-- Đặt `QLTS_DEMO_MODE=false` để chủ động ép dùng database; khi đó cần `DATABASE_URL` hợp lệ.
+- Đặt `QLTS_DEMO_MODE=false` để chủ động ép dùng database, kể cả Preview; khi đó cần `DATABASE_URL` hợp lệ cho đúng environment.
+- Vercel Production tự chạy `prisma migrate deploy` trước khi build khi đang dùng database thật.
 
 Health check trong demo mode trả:
 
@@ -251,7 +253,7 @@ Nếu app được đặt sau HTTPS reverse proxy:
 AUTH_COOKIE_SECURE=true
 ```
 
-Vercel sẽ dùng PostgreSQL thật nếu project có `DATABASE_URL`. Chỉ dùng demo khi không có database hoặc khi đặt `QLTS_DEMO_MODE=true`.
+Vercel Production sẽ dùng PostgreSQL thật khi có `DATABASE_URL`. Preview mặc định là demo read-only; muốn Preview dùng DB riêng thì đặt `QLTS_DEMO_MODE=false` và cấp `DATABASE_URL` cho Preview.
 
 
 ## Ảnh tài sản, barcode và dashboard report
