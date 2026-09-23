@@ -1,28 +1,13 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { AssetTable, type AssetRow } from "@/components/asset-table";
-import { db } from "@/lib/db";
+import { getAssets } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 
 export const metadata = { title: "Tài sản" };
 
 export default async function AssetsPage() {
-  const { t } = await getTranslations();
-
-  const assets = await db.asset.findMany({
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      serialNumber: true,
-      status: true,
-      category: { select: { name: true } },
-      location: { select: { name: true } },
-      custodian: { select: { name: true, department: true } },
-    },
-    orderBy: [{ updatedAt: "desc" }, { code: "asc" }],
-    take: 500,
-  });
+  const [{ t }, assets] = await Promise.all([getTranslations(), getAssets()]);
 
   return (
     <section className="page">

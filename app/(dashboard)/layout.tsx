@@ -1,5 +1,6 @@
 import { SidebarNav } from "@/components/sidebar-nav";
 import { getTranslations } from "@/lib/i18n";
+import { isDemoMode } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { t } = await getTranslations();
+  const demoMode = isDemoMode();
 
   return (
     <div className="app-shell">
@@ -37,13 +39,19 @@ export default async function DashboardLayout({
         <div className="sidebar-footer">
           <span className="status-dot" />
           <div>
-            <strong>Self-hosted</strong>
-            <span>PostgreSQL · Next.js</span>
+            <strong>{demoMode ? t("demo.badge") : "Self-hosted"}</strong>
+            <span>{demoMode ? t("demo.short") : "PostgreSQL · Next.js"}</span>
           </div>
         </div>
       </aside>
 
       <main id="main-content" className="main-content">
+        {demoMode ? (
+          <div className="demo-banner" role="status">
+            <strong>{t("demo.badge")}</strong>
+            <span>{t("demo.message")}</span>
+          </div>
+        ) : null}
         {children}
       </main>
     </div>

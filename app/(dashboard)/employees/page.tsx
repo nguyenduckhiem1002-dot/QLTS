@@ -1,17 +1,16 @@
 import { createEmployee } from "@/lib/actions/reference";
-import { db } from "@/lib/db";
+import { getEmployees } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
+import { isDemoMode } from "@/lib/runtime";
 
 export const metadata = { title: "Nhân viên" };
 
 export default async function EmployeesPage() {
   const [{ t }, employees] = await Promise.all([
     getTranslations(),
-    db.employee.findMany({
-      include: { _count: { select: { assets: true } } },
-      orderBy: [{ name: "asc" }, { employeeCode: "asc" }],
-    }),
+    getEmployees(),
   ]);
+  const demoMode = isDemoMode();
 
   return (
     <section className="page">
@@ -68,21 +67,21 @@ export default async function EmployeesPage() {
           </div>
           <label>
             <span>{t("employees.code")}</span>
-            <input name="employeeCode" required />
+            <input name="employeeCode" required disabled={demoMode} />
           </label>
           <label>
             <span>{t("employees.name")}</span>
-            <input name="name" required />
+            <input name="name" required disabled={demoMode} />
           </label>
           <label>
             <span>{t("employees.department")}</span>
-            <input name="department" />
+            <input name="department" disabled={demoMode} />
           </label>
           <label>
             <span>{t("employees.email")}</span>
-            <input name="email" type="email" />
+            <input name="email" type="email" disabled={demoMode} />
           </label>
-          <button className="button button-primary" type="submit">
+          <button className="button button-primary" type="submit" disabled={demoMode}>
             {t("common.create")}
           </button>
         </form>

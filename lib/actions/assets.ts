@@ -4,6 +4,7 @@ import { AssetStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { isDemoMode } from "@/lib/runtime";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -15,6 +16,8 @@ function optional(formData: FormData, key: string) {
 }
 
 export async function createAsset(formData: FormData) {
+  if (isDemoMode()) redirect("/assets?demo=readonly");
+
   const code = value(formData, "code");
   const name = value(formData, "name");
   const serialNumber = optional(formData, "serialNumber");
@@ -28,10 +31,7 @@ export async function createAsset(formData: FormData) {
 
   const duplicate = await db.asset.findFirst({
     where: {
-      OR: [
-        { code },
-        ...(serialNumber ? [{ serialNumber }] : []),
-      ],
+      OR: [{ code }, ...(serialNumber ? [{ serialNumber }] : [])],
     },
     select: { id: true },
   });
@@ -67,6 +67,8 @@ export async function createAsset(formData: FormData) {
 
 export async function assignAsset(formData: FormData) {
   const assetId = value(formData, "assetId");
+  if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
+
   const employeeId = value(formData, "employeeId");
   const note = optional(formData, "note");
 
@@ -109,6 +111,7 @@ export async function assignAsset(formData: FormData) {
 
 export async function returnAsset(formData: FormData) {
   const assetId = value(formData, "assetId");
+  if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
   if (!assetId) return;
 
   await db.$transaction(async (tx) => {

@@ -1,17 +1,16 @@
 import { createCategory } from "@/lib/actions/reference";
-import { db } from "@/lib/db";
+import { getCategories } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
+import { isDemoMode } from "@/lib/runtime";
 
 export const metadata = { title: "Danh mục" };
 
 export default async function CategoriesPage() {
   const [{ t }, categories] = await Promise.all([
     getTranslations(),
-    db.category.findMany({
-      include: { _count: { select: { assets: true } } },
-      orderBy: { name: "asc" },
-    }),
+    getCategories(),
   ]);
+  const demoMode = isDemoMode();
 
   return (
     <section className="page">
@@ -52,13 +51,13 @@ export default async function CategoriesPage() {
           </div>
           <label>
             <span>{t("categories.name")}</span>
-            <input name="name" required />
+            <input name="name" required disabled={demoMode} />
           </label>
           <label>
             <span>{t("categories.description")}</span>
-            <textarea name="description" rows={4} />
+            <textarea name="description" rows={4} disabled={demoMode} />
           </label>
-          <button className="button button-primary" type="submit">
+          <button className="button button-primary" type="submit" disabled={demoMode}>
             {t("common.create")}
           </button>
         </form>
