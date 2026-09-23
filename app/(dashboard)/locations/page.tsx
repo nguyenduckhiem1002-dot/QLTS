@@ -1,18 +1,17 @@
 import { LocationType } from "@prisma/client";
 import { createLocation } from "@/lib/actions/reference";
-import { db } from "@/lib/db";
+import { getLocations } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
+import { isDemoMode } from "@/lib/runtime";
 
 export const metadata = { title: "Vị trí" };
 
 export default async function LocationsPage() {
   const [{ t }, locations] = await Promise.all([
     getTranslations(),
-    db.location.findMany({
-      include: { _count: { select: { assets: true } } },
-      orderBy: { name: "asc" },
-    }),
+    getLocations(),
   ]);
+  const demoMode = isDemoMode();
 
   return (
     <section className="page">
@@ -56,11 +55,11 @@ export default async function LocationsPage() {
           </div>
           <label>
             <span>{t("locations.name")}</span>
-            <input name="name" required />
+            <input name="name" required disabled={demoMode} />
           </label>
           <label>
             <span>{t("locations.type")}</span>
-            <select name="type" defaultValue={LocationType.OFFICE}>
+            <select name="type" defaultValue={LocationType.OFFICE} disabled={demoMode}>
               {Object.values(LocationType).map((type) => (
                 <option value={type} key={type}>
                   {t(`location.${type}`)}
@@ -70,9 +69,9 @@ export default async function LocationsPage() {
           </label>
           <label>
             <span>{t("locations.address")}</span>
-            <input name="address" />
+            <input name="address" disabled={demoMode} />
           </label>
-          <button className="button button-primary" type="submit">
+          <button className="button button-primary" type="submit" disabled={demoMode}>
             {t("common.create")}
           </button>
         </form>

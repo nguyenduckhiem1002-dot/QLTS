@@ -2,13 +2,17 @@
 
 import { LocationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { isDemoMode } from "@/lib/runtime";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
 export async function createCategory(formData: FormData) {
+  if (isDemoMode()) redirect("/categories?demo=readonly");
+
   const name = value(formData, "name");
   const description = value(formData, "description") || null;
 
@@ -26,6 +30,8 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function createLocation(formData: FormData) {
+  if (isDemoMode()) redirect("/locations?demo=readonly");
+
   const name = value(formData, "name");
   const type = value(formData, "type") as LocationType;
   const address = value(formData, "address") || null;
@@ -48,6 +54,8 @@ export async function createLocation(formData: FormData) {
 }
 
 export async function createEmployee(formData: FormData) {
+  if (isDemoMode()) redirect("/employees?demo=readonly");
+
   const employeeCode = value(formData, "employeeCode");
   const name = value(formData, "name");
   const email = value(formData, "email") || null;

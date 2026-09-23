@@ -1,30 +1,22 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { getDashboardData } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 
 export default async function DashboardPage() {
-  const { t, locale } = await getTranslations();
+  const [{ t, locale }, data] = await Promise.all([
+    getTranslations(),
+    getDashboardData(),
+  ]);
 
-  const [total, inUse, available, maintenance, categories, locations, recent] =
-    await Promise.all([
-      db.asset.count(),
-      db.asset.count({ where: { status: "IN_USE" } }),
-      db.asset.count({ where: { status: "AVAILABLE" } }),
-      db.asset.count({ where: { status: "MAINTENANCE" } }),
-      db.category.count(),
-      db.location.count(),
-      db.asset.findMany({
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          status: true,
-          updatedAt: true,
-        },
-        orderBy: { updatedAt: "desc" },
-        take: 7,
-      }),
-    ]);
+  const {
+    total,
+    inUse,
+    available,
+    maintenance,
+    categories,
+    locations,
+    recent,
+  } = data;
 
   const dateLocale = locale === "vi" ? "vi-VN" : "en-US";
   const max = Math.max(total, 1);

@@ -156,3 +156,24 @@ Các module tiếp theo nên phát triển độc lập trên foundation này:
 - Quản lý nhân viên đầy đủ.
 - RBAC và đăng nhập nội bộ.
 - File / hình ảnh bằng MinIO nếu cần self-host object storage.
+
+
+## Preview trên Vercel
+
+Vercel được dùng để review giao diện và tự động chạy ở chế độ demo read-only.
+
+- Khi `VERCEL=1`, QLTS mặc định dùng dữ liệu mẫu và không kết nối PostgreSQL.
+- Có thể ép demo ở bất kỳ môi trường nào bằng `QLTS_DEMO_MODE=true`.
+- Có thể ép Vercel dùng database thật bằng `QLTS_DEMO_MODE=false`, nhưng `DATABASE_URL` khi đó phải là PostgreSQL mà hạ tầng Vercel truy cập được.
+- PostgreSQL nằm trong LAN / Docker nội bộ nên được dùng cho deployment self-host, không dùng trực tiếp cho preview public.
+
+Health check trong demo mode trả:
+
+```json
+{
+  "ok": true,
+  "service": "qlts",
+  "mode": "demo",
+  "database": "not-required"
+}
+```

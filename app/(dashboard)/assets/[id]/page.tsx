@@ -2,8 +2,9 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { assignAsset, returnAsset } from "@/lib/actions/assets";
-import { db } from "@/lib/db";
+import { getAssetDetail, getEmployeesForAssignment } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
+import { isDemoMode } from "@/lib/runtime";
 
 export default async function AssetDetailPage({
   params,
@@ -14,24 +15,13 @@ export default async function AssetDetailPage({
 
   const [{ t, locale }, asset, employees] = await Promise.all([
     getTranslations(),
-    db.asset.findUnique({
-      where: { id },
-      include: {
-        category: true,
-        location: true,
-        custodian: true,
-        assignments: {
-          include: { employee: true },
-          orderBy: { assignedAt: "desc" },
-          take: 12,
-        },
-      },
-    }),
-    db.employee.findMany({ orderBy: { name: "asc" } }),
+    getAssetDetail(id),
+    getEmployeesForAssignment(),
   ]);
 
   if (!asset) notFound();
 
+  const demoMode = isDemoMode();
   const dateLocale = locale === "vi" ? "vi-VN" : "en-US";
   const formatDate = (date: Date | null) =>
     date
@@ -102,6 +92,7 @@ export default async function AssetDetailPage({
                 name="employeeId"
                 required
                 defaultValue={asset.custodianId ?? ""}
+                disabled={demoMode}
               >
                 <option value="" disabled>
                   —
@@ -116,9 +107,9 @@ export default async function AssetDetailPage({
             </label>
             <label>
               <span>{t("assets.note")}</span>
-              <input name="note" />
+              <input name="note" disabled={demoMode} />
             </label>
-            <button className="button button-primary" type="submit">
+            <button className="button button-primary" type="submit" disabled={demoMode}>
               {t("assets.assign")}
             </button>
           </form>
@@ -127,7 +118,7 @@ export default async function AssetDetailPage({
             <form action={returnAsset} className="return-form">
               <input type="hidden" name="assetId" value={asset.id} />
               <p>{t("assets.returnHelp")}</p>
-              <button className="button button-secondary" type="submit">
+              <button className="button button-secondary" type="submit" disabled={demoMode}>
                 <RotateCcw size={15} aria-hidden="true" />
                 {t("assets.return")}
               </button>
