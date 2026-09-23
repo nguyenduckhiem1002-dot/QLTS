@@ -1,26 +1,41 @@
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  ImagePlus,
+  RotateCcw,
+  ScanBarcode,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { assignAsset, returnAsset } from "@/lib/actions/assets";
-import { getAssetDetail, getEmployeesForAssignment } from "@/lib/data";
+import {
+  assignAsset,
+  removeAssetImage,
+  replaceAssetImage,
+  returnAsset,
+} from "@/lib/actions/assets";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAssetDetail, getEmployeesForAssignment } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
 
 export default async function AssetDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 }) {
   const { id } = await params;
 
-  const [{ t, locale }, asset, employees, currentUser] = await Promise.all([
-    getTranslations(),
-    getAssetDetail(id),
-    getEmployeesForAssignment(),
-    getCurrentUser(),
-  ]);
+  const [{ t, locale }, asset, employees, currentUser, pageParams] =
+    await Promise.all([
+      getTranslations(),
+      getAssetDetail(id),
+      getEmployeesForAssignment(),
+      getCurrentUser(),
+      searchParams,
+    ]);
 
   if (!asset) notFound();
 
@@ -34,6 +49,26 @@ export default async function AssetDetailPage({
           timeStyle: "short",
         }).format(date)
       : "—";
+
+  const mediaError =
+    pageParams.error === "image_type"
+      ? t("assets.imageTypeError")
+      : pageParams.error === "image_size"
+        ? t("assets.imageSizeError")
+        : pageParams.error === "image_required"
+          ? t("assets.imageRequired")
+          : null;
+
+  const mediaSuccess =
+    pageParams.success === "image"
+      ? t("assets.imageUpdated")
+      : pageParams.success === "image_removed"
+        ? t("assets.imageRemoved")
+        : null;
+
+  const imageUrl = asset.image
+    ? `/api/assets/${asset.id}/image?v=${asset.image.updatedAt.getTime()}`
+    : null;
 
   return (
     <section className="page">
@@ -55,9 +90,105 @@ export default async function AssetDetailPage({
         </div>
       </header>
 
-      <div className="detail-grid">
+      {mediaError ? <div className="form-error">{mediaError}</div> : null}
+      {mediaSuccess ? <div className="form-success">{mediaSuccess}</div> : null}
+
+      <section className="asset-media-grid" aria-label={t("assets.media")}>
+        <article className="data-surface asset-image-panel">
+          <div className="surface-heading">
+            <div>
+              <h2>{t("assets.image")}</h2>
+              <span>{asset.image?.fileName ?? t("assets.noImage")}</span>
+            </div>
+            <ImagePlus size={18} aria-hidden="true" />
+          </div>
+
+          <div className="asset-image-frame">
+            {imageUrl ? (
+              <img src={imageUrl} alt={`${asset.name} - ${t("assets.image")}`} />
+            ) : (
+              <div className="asset-image-empty">
+                <ImagePlus size={30} aria-hidden="true" />
+                <span>{t("assets.noImage")}</span>
+              </div>
+            )}
+          </div>
+
+          {canManage && !demoMode ? (
+            <div className="asset-image-actions">
+              <form action={replaceAssetImage} className="asset-image-upload">
+                <input type="hidden" name="assetId" value={asset.id} />
+                <label>
+                  <span>{asset.image ? t("assets.replaceImage") : t("assets.addImage")}</span>
+                  <input
+                    name="image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    required
+                  />
+                </label>
+                <button className="button button-secondary" type="submit">
+                  {asset.image ? t("assets.replaceImage") : t("assets.addImage")}
+                </button>
+              </form>
+
+              {asset.image ? (
+                <form action={removeAssetImage}>
+                  <input type="hidden" name="assetId" value={asset.id} />
+                  <button className="button button-danger-soft" type="submit">
+                    <Trash2 size={15} aria-hidden="true" />
+                    {t("assets.removeImage")}
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          ) : null}
+        </article>
+
+        <article className="data-surface barcode-panel">
+          <div className="surface-heading">
+            <div>
+              <h2>{t("assets.barcode")}</h2>
+              <span>{t("assets.barcodeType")}</span>
+            </div>
+            <ScanBarcode size={18} aria-hidden="true" />
+          </div>
+
+          <div className="barcode-frame">
+            <img
+              src={`/api/assets/${asset.id}/barcode`}
+              alt={`${t("assets.barcode")} ${asset.barcode ?? asset.code}`}
+            />
+          </div>
+
+          <div className="barcode-meta">
+            <div>
+              <span>{t("assets.barcodeValue")}</span>
+              <strong>{asset.barcode ?? asset.code}</strong>
+            </div>
+            <a
+              className="surface-action"
+              href={`/api/assets/${asset.id}/barcode`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("assets.openBarcode")}
+            </a>
+          </div>
+        </article>
+      </section>
+
+      <div className="detail-grid detail-grid-spaced">
         <article className="data-surface detail-panel">
           <dl className="detail-list">
+            <div>
+              <dt>{t("assets.code")}</dt>
+              <dd className="mono-value">{asset.code}</dd>
+            </div>
+            <div>
+              <dt>{t("assets.barcode")}</dt>
+              <dd className="mono-value">{asset.barcode ?? asset.code}</dd>
+            </div>
             <div>
               <dt>{t("assets.serial")}</dt>
               <dd className="mono-value">{asset.serialNumber ?? "—"}</dd>
@@ -113,7 +244,11 @@ export default async function AssetDetailPage({
               <span>{t("assets.note")}</span>
               <input name="note" disabled={demoMode || !canManage} />
             </label>
-            <button className="button button-primary" type="submit" disabled={demoMode || !canManage}>
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={demoMode || !canManage}
+            >
               {t("assets.assign")}
             </button>
           </form>
@@ -122,7 +257,11 @@ export default async function AssetDetailPage({
             <form action={returnAsset} className="return-form">
               <input type="hidden" name="assetId" value={asset.id} />
               <p>{t("assets.returnHelp")}</p>
-              <button className="button button-secondary" type="submit" disabled={demoMode || !canManage}>
+              <button
+                className="button button-secondary"
+                type="submit"
+                disabled={demoMode || !canManage}
+              >
                 <RotateCcw size={15} aria-hidden="true" />
                 {t("assets.return")}
               </button>

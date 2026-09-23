@@ -74,6 +74,7 @@ model Asset {
   code         String            @unique
   name         String
   serialNumber String?           @unique
+  barcode      String?           @unique
   description  String?
   status       AssetStatus       @default(AVAILABLE)
   purchaseDate DateTime?
@@ -85,6 +86,7 @@ model Asset {
   location     Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
   custodian    Employee?         @relation("CurrentCustodian", fields: [custodianId], references: [id], onDelete: SetNull)
   assignments  AssetAssignment[]
+  image        AssetImage?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -93,6 +95,20 @@ model Asset {
   @@index([categoryId])
   @@index([locationId])
   @@index([custodianId])
+}
+
+model AssetImage {
+  id        String   @id @default(cuid())
+  assetId   String   @unique
+  fileName  String
+  mimeType  String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
 }
 
 model AssetAssignment {

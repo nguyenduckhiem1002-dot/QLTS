@@ -16,6 +16,7 @@ export type AssetRow = {
   code: string;
   name: string;
   serialNumber: string | null;
+  barcode: string | null;
   status: AssetStatus;
   category: { name: string } | null;
   location: { name: string } | null;
@@ -26,6 +27,7 @@ type Labels = {
   search: string;
   allStatuses: string;
   code: string;
+  barcode: string;
   name: string;
   category: string;
   location: string;
@@ -54,7 +56,7 @@ export function AssetTable({
       const matchesStatus = status === "ALL" || asset.status === status;
       const matchesQuery =
         !normalized ||
-        [asset.code, asset.name, asset.serialNumber]
+        [asset.code, asset.name, asset.serialNumber, asset.barcode]
           .filter(Boolean)
           .some((value) => value!.toLocaleLowerCase().includes(normalized));
 
@@ -118,6 +120,11 @@ export function AssetTable({
                     <Link className="asset-link" href={`/assets/${asset.id}`}>
                       {asset.code}
                     </Link>
+                    {asset.barcode ? (
+                      <small className="cell-subtitle">
+                        {labels.barcode}: {asset.barcode}
+                      </small>
+                    ) : null}
                   </td>
                   <td>
                     <Link className="cell-title-link" href={`/assets/${asset.id}`}>

@@ -158,14 +158,16 @@ Các module tiếp theo nên phát triển độc lập trên foundation này:
 - File / hình ảnh bằng MinIO nếu cần self-host object storage.
 
 
-## Preview trên Vercel
+## Chế độ database / demo
 
-Vercel được dùng để review giao diện và tự động chạy ở chế độ demo read-only.
+QLTS dùng PostgreSQL thật cho self-host và Vercel Production khi có `DATABASE_URL`.
 
-- Khi `VERCEL=1`, QLTS mặc định dùng dữ liệu mẫu và không kết nối PostgreSQL.
-- Có thể ép demo ở bất kỳ môi trường nào bằng `QLTS_DEMO_MODE=true`.
-- Có thể ép Vercel dùng database thật bằng `QLTS_DEMO_MODE=false`, nhưng `DATABASE_URL` khi đó phải là PostgreSQL mà hạ tầng Vercel truy cập được.
-- PostgreSQL nằm trong LAN / Docker nội bộ nên được dùng cho deployment self-host, không dùng trực tiếp cho preview public.
+- Self-host / Vercel Production có `DATABASE_URL`: ứng dụng dùng database thật.
+- Vercel Preview mặc định chạy demo read-only để PR không ghi nhầm vào database production.
+- Nếu không có `DATABASE_URL`: ứng dụng fallback sang demo read-only.
+- Đặt `QLTS_DEMO_MODE=true` để chủ động ép demo.
+- Đặt `QLTS_DEMO_MODE=false` để chủ động ép dùng database, kể cả Preview; khi đó cần `DATABASE_URL` hợp lệ cho đúng environment.
+- Vercel Production tự chạy `prisma migrate deploy` trước khi build khi đang dùng database thật.
 
 Health check trong demo mode trả:
 
@@ -251,4 +253,18 @@ Nếu app được đặt sau HTTPS reverse proxy:
 AUTH_COOKIE_SECURE=true
 ```
 
-Vercel preview vẫn tự chạy demo read-only và không yêu cầu database/login thật.
+Vercel Production sẽ dùng PostgreSQL thật khi có `DATABASE_URL`. Preview mặc định là demo read-only; muốn Preview dùng DB riêng thì đặt `QLTS_DEMO_MODE=false` và cấp `DATABASE_URL` cho Preview.
+
+
+## Ảnh tài sản, barcode và dashboard report
+
+Từ phiên bản 0.4:
+
+- Mỗi tài sản có thể có một ảnh chính JPEG/PNG/WebP, tối đa 4 MB.
+- Ảnh được lưu trong bảng `AssetImage` riêng dưới dạng `BYTEA` để các truy vấn danh sách/report không tải blob.
+- Có thể thêm, thay hoặc xóa ảnh từ trang chi tiết tài sản.
+- Mỗi tài sản có `barcode` unique. Nếu để trống khi tạo, hệ thống dùng `code` làm giá trị barcode.
+- Barcode được render dạng Code128 SVG tại `/api/assets/:id/barcode`, phù hợp để quét hoặc mở riêng để in tem.
+- Dashboard có report tỷ lệ sử dụng, phân bố trạng thái, top danh mục và top vị trí.
+
+Server Actions được cấu hình body limit 5 MB; ứng dụng chủ động giới hạn file ảnh ở 4 MB.
