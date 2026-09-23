@@ -39,6 +39,7 @@ Không có một REST API riêng chỉ để web tự gọi chính nó. Những 
 - Audit log ở tầng dữ liệu.
 - Quản lý danh mục.
 - Quản lý vị trí.
+- Quản lý nhân viên và số tài sản đang giữ.
 - Việt/Anh bằng cookie, mặc định tiếng Việt.
 - Persistent dashboard layout.
 - Next.js Link prefetch + route loading skeleton.
