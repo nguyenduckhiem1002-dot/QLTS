@@ -32,6 +32,7 @@ type Labels = {
   custodian: string;
   status: string;
   empty: string;
+  items: string;
 };
 
 export function AssetTable({
@@ -64,29 +65,37 @@ export function AssetTable({
   return (
     <div className="table-section">
       <div className="table-toolbar">
-        <label className="search-box">
-          <Search size={18} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={labels.search}
-          />
-        </label>
+        <div className="toolbar-primary">
+          <label className="search-box">
+            <span className="sr-only">{labels.search}</span>
+            <Search size={17} aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={labels.search}
+            />
+          </label>
 
-        <select
-          className="select-control"
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as AssetStatus | "ALL")
-          }
-        >
-          <option value="ALL">{labels.allStatuses}</option>
-          {Object.entries(statusLabels).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+          <select
+            aria-label={labels.status}
+            className="select-control"
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as AssetStatus | "ALL")
+            }
+          >
+            <option value="ALL">{labels.allStatuses}</option>
+            {Object.entries(statusLabels).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <span className="result-count">
+          <strong>{filtered.length}</strong> / {assets.length} {labels.items}
+        </span>
       </div>
 
       <div className="table-card">
@@ -123,7 +132,7 @@ export function AssetTable({
                   <td>
                     {asset.custodian ? (
                       <>
-                        <span>{asset.custodian.name}</span>
+                        <span className="cell-primary">{asset.custodian.name}</span>
                         {asset.custodian.department ? (
                           <small className="cell-subtitle">
                             {asset.custodian.department}
@@ -131,13 +140,12 @@ export function AssetTable({
                         ) : null}
                       </>
                     ) : (
-                      "—"
+                      <span className="cell-muted">—</span>
                     )}
                   </td>
                   <td>
-                    <span
-                      className={`status-badge status-${asset.status.toLowerCase()}`}
-                    >
+                    <span className={`status-text status-${asset.status.toLowerCase()}`}>
+                      <i aria-hidden="true" />
                       {statusLabels[asset.status]}
                     </span>
                   </td>

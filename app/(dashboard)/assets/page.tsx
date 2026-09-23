@@ -34,7 +34,7 @@ export default async function AssetsPage() {
         </div>
 
         <Link href="/assets/new" className="button button-primary">
-          <Plus size={17} />
+          <Plus size={16} aria-hidden="true" />
           {t("assets.add")}
         </Link>
       </header>
@@ -51,6 +51,7 @@ export default async function AssetsPage() {
           custodian: t("assets.custodian"),
           status: t("assets.status"),
           empty: t("assets.empty"),
+          items: t("common.assets"),
         }}
         statusLabels={{
           AVAILABLE: t("status.AVAILABLE"),

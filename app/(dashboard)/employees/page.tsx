@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { createEmployee } from "@/lib/actions/reference";
 import { db } from "@/lib/db";
 import { getTranslations } from "@/lib/i18n";
@@ -41,14 +40,16 @@ export default async function EmployeesPage() {
                 {employees.map((employee) => (
                   <tr key={employee.id}>
                     <td>
-                      <span className="asset-link">{employee.employeeCode}</span>
+                      <span className="mono-code">{employee.employeeCode}</span>
                     </td>
                     <td>
-                      <strong>{employee.name}</strong>
+                      <strong className="cell-primary">{employee.name}</strong>
                     </td>
                     <td>{employee.department ?? "—"}</td>
-                    <td>{employee.email ?? "—"}</td>
-                    <td>{employee._count.assets}</td>
+                    <td className="cell-email">{employee.email ?? "—"}</td>
+                    <td>
+                      <span className="numeric-value">{employee._count.assets}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -61,10 +62,10 @@ export default async function EmployeesPage() {
         </div>
 
         <form action={createEmployee} className="panel compact-form">
-          <div className="section-icon">
-            <Users size={20} />
+          <div className="form-intro">
+            <span className="form-kicker">{t("nav.employees")}</span>
+            <h2>{t("employees.create")}</h2>
           </div>
-          <h2>{t("employees.create")}</h2>
           <label>
             <span>{t("employees.code")}</span>
             <input name="employeeCode" required />

@@ -1,4 +1,4 @@
-import { ArrowLeft, RotateCcw, UserRoundCheck } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { assignAsset, returnAsset } from "@/lib/actions/assets";
@@ -45,27 +45,28 @@ export default async function AssetDetailPage({
     <section className="page">
       <header className="page-header">
         <Link className="back-link" href="/assets">
-          <ArrowLeft size={16} />
+          <ArrowLeft size={15} aria-hidden="true" />
           {t("common.back")}
         </Link>
         <div className="detail-title-row">
           <div>
-            <p className="eyebrow">{asset.code}</p>
+            <p className="eyebrow mono-eyebrow">{asset.code}</p>
             <h1>{asset.name}</h1>
             <p>{t("assets.detailTitle")}</p>
           </div>
-          <span className={`status-badge status-${asset.status.toLowerCase()}`}>
+          <span className={`status-text status-${asset.status.toLowerCase()}`}>
+            <i aria-hidden="true" />
             {t(`status.${asset.status}`)}
           </span>
         </div>
       </header>
 
       <div className="detail-grid">
-        <article className="panel detail-panel">
+        <article className="data-surface detail-panel">
           <dl className="detail-list">
             <div>
               <dt>{t("assets.serial")}</dt>
-              <dd>{asset.serialNumber ?? "—"}</dd>
+              <dd className="mono-value">{asset.serialNumber ?? "—"}</dd>
             </div>
             <div>
               <dt>{t("assets.category")}</dt>
@@ -87,11 +88,11 @@ export default async function AssetDetailPage({
         </article>
 
         <article className="panel action-panel">
-          <div className="section-icon">
-            <UserRoundCheck size={20} />
+          <div className="form-intro">
+            <span className="form-kicker">{t("assets.status")}</span>
+            <h2>{t("assets.assignment")}</h2>
+            <p>{t("assets.assignmentHelp")}</p>
           </div>
-          <h2>{t("assets.assignment")}</h2>
-          <p>{t("assets.assignmentHelp")}</p>
 
           <form action={assignAsset} className="stack-form">
             <input type="hidden" name="assetId" value={asset.id} />
@@ -127,7 +128,7 @@ export default async function AssetDetailPage({
               <input type="hidden" name="assetId" value={asset.id} />
               <p>{t("assets.returnHelp")}</p>
               <button className="button button-secondary" type="submit">
-                <RotateCcw size={16} />
+                <RotateCcw size={15} aria-hidden="true" />
                 {t("assets.return")}
               </button>
             </form>
@@ -135,9 +136,12 @@ export default async function AssetDetailPage({
         </article>
       </div>
 
-      <article className="panel history-panel">
-        <div className="panel-heading">
-          <h2>{t("assets.history")}</h2>
+      <article className="data-surface history-panel">
+        <div className="surface-heading">
+          <div>
+            <h2>{t("assets.history")}</h2>
+            <span>{asset.assignments.length}</span>
+          </div>
         </div>
 
         <div className="history-list">
