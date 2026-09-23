@@ -23,20 +23,26 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      QLTS_DEMO_MODE: "false"
       DATABASE_URL: postgresql://qlts:qlts@postgres:5432/qlts?schema=public
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      QLTS_BOOTSTRAP_ADMIN_NAME: ${QLTS_BOOTSTRAP_ADMIN_NAME:-Casla Admin}
+      QLTS_BOOTSTRAP_ADMIN_EMAIL: ${QLTS_BOOTSTRAP_ADMIN_EMAIL:-}
+      QLTS_BOOTSTRAP_ADMIN_PASSWORD: ${QLTS_BOOTSTRAP_ADMIN_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Casla Assets <no-reply@casla.vn>}
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - "3000:3000"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-        ]
+      test: ["CMD","node","-e","fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 20s
       timeout: 5s
       retries: 5
