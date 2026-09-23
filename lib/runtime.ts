@@ -4,8 +4,10 @@ export function isDemoMode() {
   if (configuredMode === "true") return true;
   if (configuredMode === "false") return false;
 
-  // Use the real database whenever DATABASE_URL is available, including Vercel.
-  // Demo mode is now only a fallback for environments without a database.
+  // Vercel Preview stays read-only by default so PRs never mutate the
+  // production database. Production uses the real DB whenever available.
+  if (process.env.VERCEL_ENV === "preview") return true;
+
   return !process.env.DATABASE_URL;
 }
 
