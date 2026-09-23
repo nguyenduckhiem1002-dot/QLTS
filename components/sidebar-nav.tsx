@@ -4,9 +4,9 @@ import {
   LayoutDashboard,
   MapPin,
   PackageSearch,
-  Users,
   Settings,
   Tags,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,9 +46,11 @@ export function SidebarNav({ labels }: { labels: Labels }) {
             key={item.href}
             href={item.href}
             prefetch
+            aria-label={labels[item.key]}
+            aria-current={active ? "page" : undefined}
             className={`nav-link${active ? " nav-link-active" : ""}`}
           >
-            <Icon size={19} strokeWidth={1.9} />
+            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
             <span>{labels[item.key]}</span>
           </Link>
         );

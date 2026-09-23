@@ -1,4 +1,3 @@
-import { Tags } from "lucide-react";
 import { createCategory } from "@/lib/actions/reference";
 import { db } from "@/lib/db";
 import { getTranslations } from "@/lib/i18n";
@@ -25,33 +24,39 @@ export default async function CategoriesPage() {
       </header>
 
       <div className="split-layout">
-        <div className="card-grid">
+        <section className="collection-surface" aria-label={t("categories.title")}>
+          <div className="collection-heading">
+            <span>{t("categories.name")}</span>
+            <span>{t("categories.assetCount")}</span>
+          </div>
+
           {categories.map((category) => (
-            <article className="entity-card" key={category.id}>
+            <article className="collection-row" key={category.id}>
               <div>
                 <h2>{category.name}</h2>
                 <p>{category.description ?? t("common.none")}</p>
               </div>
-              <div className="entity-count">
-                <strong>{category._count.assets}</strong>
-                <span>{t("common.assets")}</span>
-              </div>
+              <strong className="collection-count">{category._count.assets}</strong>
             </article>
           ))}
-        </div>
+
+          {categories.length === 0 ? (
+            <div className="empty-state">{t("common.none")}</div>
+          ) : null}
+        </section>
 
         <form action={createCategory} className="panel compact-form">
-          <div className="section-icon">
-            <Tags size={20} />
+          <div className="form-intro">
+            <span className="form-kicker">{t("nav.categories")}</span>
+            <h2>{t("categories.create")}</h2>
           </div>
-          <h2>{t("categories.create")}</h2>
           <label>
             <span>{t("categories.name")}</span>
             <input name="name" required />
           </label>
           <label>
             <span>{t("categories.description")}</span>
-            <textarea name="description" rows={3} />
+            <textarea name="description" rows={4} />
           </label>
           <button className="button button-primary" type="submit">
             {t("common.create")}

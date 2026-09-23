@@ -1,17 +1,9 @@
-import {
-  Boxes,
-  CheckCircle2,
-  CircleDot,
-  MapPin,
-  Tags,
-  Wrench,
-} from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslations } from "@/lib/i18n";
 
 export default async function DashboardPage() {
-  const { t } = await getTranslations();
+  const { t, locale } = await getTranslations();
 
   const [total, inUse, available, maintenance, categories, locations, recent] =
     await Promise.all([
@@ -30,63 +22,101 @@ export default async function DashboardPage() {
           updatedAt: true,
         },
         orderBy: { updatedAt: "desc" },
-        take: 5,
+        take: 7,
       }),
     ]);
 
-  const cards = [
-    { label: t("dashboard.total"), value: total, icon: Boxes },
-    { label: t("dashboard.inUse"), value: inUse, icon: CircleDot },
-    { label: t("dashboard.available"), value: available, icon: CheckCircle2 },
-    { label: t("dashboard.maintenance"), value: maintenance, icon: Wrench },
-    { label: t("dashboard.categories"), value: categories, icon: Tags },
-    { label: t("dashboard.locations"), value: locations, icon: MapPin },
-  ];
+  const dateLocale = locale === "vi" ? "vi-VN" : "en-US";
+  const max = Math.max(total, 1);
 
   return (
     <section className="page">
-      <header className="page-header">
+      <header className="page-header dashboard-heading">
         <div>
           <p className="eyebrow">{t("app.name")}</p>
           <h1>{t("dashboard.title")}</h1>
           <p>{t("dashboard.subtitle")}</p>
         </div>
+        <Link href="/assets" className="text-action">
+          {t("dashboard.viewAll")}
+          <span aria-hidden="true">→</span>
+        </Link>
       </header>
 
-      <div className="metric-grid">
-        {cards.map(({ label, value, icon: Icon }) => (
-          <article className="metric-card" key={label}>
-            <div className="metric-icon">
-              <Icon size={20} />
+      <section className="overview-board" aria-label={t("dashboard.title")}>
+        <div className="overview-primary">
+          <span className="overview-label">{t("dashboard.total")}</span>
+          <strong className="overview-total">{total}</strong>
+          <div className="overview-meta">
+            <div>
+              <strong>{categories}</strong>
+              <span>{t("dashboard.categories")}</span>
             </div>
             <div>
-              <span>{label}</span>
-              <strong>{value}</strong>
+              <strong>{locations}</strong>
+              <span>{t("dashboard.locations")}</span>
             </div>
-          </article>
-        ))}
-      </div>
+          </div>
+        </div>
 
-      <article className="panel recent-panel">
-        <div className="panel-heading">
-          <h2>{t("dashboard.recent")}</h2>
-          <Link href="/assets">{t("dashboard.viewAll")}</Link>
+        <div className="status-grid">
+          <div className="status-stat">
+            <div className="status-stat-heading">
+              <span>{t("dashboard.inUse")}</span>
+              <strong>{inUse}</strong>
+            </div>
+            <progress className="status-progress progress-blue" value={inUse} max={max} />
+          </div>
+          <div className="status-stat">
+            <div className="status-stat-heading">
+              <span>{t("dashboard.available")}</span>
+              <strong>{available}</strong>
+            </div>
+            <progress className="status-progress progress-green" value={available} max={max} />
+          </div>
+          <div className="status-stat">
+            <div className="status-stat-heading">
+              <span>{t("dashboard.maintenance")}</span>
+              <strong>{maintenance}</strong>
+            </div>
+            <progress className="status-progress progress-amber" value={maintenance} max={max} />
+          </div>
+        </div>
+      </section>
+
+      <section className="data-surface recent-panel">
+        <div className="surface-heading">
+          <div>
+            <h2>{t("dashboard.recent")}</h2>
+            <span>{recent.length} {t("common.assets")}</span>
+          </div>
+          <Link href="/assets" className="surface-action">
+            {t("dashboard.viewAll")}
+          </Link>
         </div>
 
         <div className="recent-list">
           {recent.map((asset) => (
             <Link href={`/assets/${asset.id}`} className="recent-row" key={asset.id}>
-              <div>
-                <strong>{asset.name}</strong>
-                <span>{asset.code}</span>
+              <div className="recent-identity">
+                <span className="mono-code">{asset.code}</span>
+                <div>
+                  <strong>{asset.name}</strong>
+                  <span>
+                    {new Intl.DateTimeFormat(dateLocale, {
+                      dateStyle: "medium",
+                    }).format(asset.updatedAt)}
+                  </span>
+                </div>
               </div>
-              <span className={`status-badge status-${asset.status.toLowerCase()}`}>
+              <span className={`status-text status-${asset.status.toLowerCase()}`}>
+                <i aria-hidden="true" />
                 {t(`status.${asset.status}`)}
               </span>
             </Link>
           ))}
         </div>
-      </article>
+      </section>
     </section>
   );
 }

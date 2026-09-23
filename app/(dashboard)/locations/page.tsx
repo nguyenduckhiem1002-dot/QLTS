@@ -1,4 +1,3 @@
-import { MapPin } from "lucide-react";
 import { LocationType } from "@prisma/client";
 import { createLocation } from "@/lib/actions/reference";
 import { db } from "@/lib/db";
@@ -26,32 +25,35 @@ export default async function LocationsPage() {
       </header>
 
       <div className="split-layout">
-        <div className="card-grid">
+        <section className="collection-surface" aria-label={t("locations.title")}>
+          <div className="collection-heading">
+            <span>{t("locations.name")}</span>
+            <span>{t("locations.assetCount")}</span>
+          </div>
+
           {locations.map((location) => (
-            <article className="entity-card" key={location.id}>
-              <div className="location-copy">
-                <div className="entity-icon">
-                  <MapPin size={19} />
-                </div>
-                <div>
+            <article className="collection-row" key={location.id}>
+              <div>
+                <div className="collection-title-line">
                   <h2>{location.name}</h2>
-                  <p>{t(`location.${location.type}`)}</p>
-                  {location.address ? <small>{location.address}</small> : null}
+                  <span className="quiet-tag">{t(`location.${location.type}`)}</span>
                 </div>
+                <p>{location.address ?? t("common.none")}</p>
               </div>
-              <div className="entity-count">
-                <strong>{location._count.assets}</strong>
-                <span>{t("common.assets")}</span>
-              </div>
+              <strong className="collection-count">{location._count.assets}</strong>
             </article>
           ))}
-        </div>
+
+          {locations.length === 0 ? (
+            <div className="empty-state">{t("common.none")}</div>
+          ) : null}
+        </section>
 
         <form action={createLocation} className="panel compact-form">
-          <div className="section-icon">
-            <MapPin size={20} />
+          <div className="form-intro">
+            <span className="form-kicker">{t("nav.locations")}</span>
+            <h2>{t("locations.create")}</h2>
           </div>
-          <h2>{t("locations.create")}</h2>
           <label>
             <span>{t("locations.name")}</span>
             <input name="name" required />
