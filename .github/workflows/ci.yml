@@ -9,10 +9,24 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: qlts
+          POSTGRES_PASSWORD: qlts
+          POSTGRES_DB: qlts
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U qlts -d qlts"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       DATABASE_URL: postgresql://qlts:qlts@localhost:5432/qlts?schema=public
-      API_PORT: 3001
-      VITE_API_URL: http://localhost:3001
 
     steps:
       - name: Checkout
@@ -26,16 +40,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-
-      - name: Create local env
-        run: cp .env.example .env
+          node-version: 22.20.0
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm db:generate
+
+      - name: Apply migrations
+        run: pnpm db:deploy
+
+      - name: Seed database
+        run: pnpm db:seed
 
       - name: Typecheck
         run: pnpm typecheck

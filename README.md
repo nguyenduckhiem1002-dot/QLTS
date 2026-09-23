@@ -1,68 +1,157 @@
 # QLTS
 
-QLTS là nền tảng quản lý tài sản nội bộ được thiết kế lại theo hướng gọn, dễ mở rộng và ưu tiên trải nghiệm tiếng Việt.
-
-Dự án dùng DATN/Casla Assets làm tài liệu tham khảo về nghiệp vụ và luồng sử dụng, nhưng phần foundation này được tổ chức lại để tránh kéo theo các bề mặt SaaS và dependency không cần thiết.
+QLTS là hệ thống quản lý tài sản nội bộ, xây dựng theo hướng self-host, ít phụ thuộc dịch vụ cloud và ưu tiên trải nghiệm điều hướng nhanh.
 
 ## Kiến trúc
 
 ```text
-QLTS/
-├── apps/
-│   ├── web/          # React 19 + Vite
-│   └── api/          # Hono API
-├── packages/
-│   └── database/     # Prisma + PostgreSQL
-├── docker-compose.yml
-└── turbo.json
+Browser
+   │
+   ▼
+Next.js 16 App Router
+   │
+   ├── Server Components ──► Prisma ──► PostgreSQL
+   │
+   └── Server Actions ─────► Prisma ──► PostgreSQL
 ```
 
-## Chức năng foundation
+Không có một REST API riêng chỉ để web tự gọi chính nó. Những phần cần API cho mobile hoặc tích hợp ngoài có thể bổ sung bằng Route Handlers trong `app/api`.
+
+## Stack
+
+- Next.js **16.3.6**
+- React 19
+- TypeScript
+- PostgreSQL 16 self-host
+- Prisma ORM
+- Docker / Docker Compose
+- Lucide icons
+
+## Chức năng hiện có
 
 - Dashboard tổng quan tài sản.
-- Danh sách tài sản với tìm kiếm nhanh.
-- Danh mục tài sản.
-- Vị trí tài sản.
-- Người đang giữ tài sản và lịch sử bàn giao ở tầng dữ liệu.
+- Danh sách tài sản với tìm kiếm và lọc trạng thái ở client.
+- Tạo tài sản.
+- Trang chi tiết tài sản.
+- Bàn giao tài sản cho nhân viên.
+- Hoàn trả tài sản.
+- Lưu lịch sử bàn giao.
 - Audit log ở tầng dữ liệu.
-- Giao diện Việt/Anh, mặc định tiếng Việt.
-- App shell giữ nguyên khi điều hướng.
-- Cache/prefetch dữ liệu để giảm cảm giác tải lại trang.
-- PostgreSQL local bằng Docker Compose.
+- Quản lý danh mục.
+- Quản lý vị trí.
+- Việt/Anh bằng cookie, mặc định tiếng Việt.
+- Persistent dashboard layout.
+- Next.js Link prefetch + route loading skeleton.
+- Health endpoint kiểm tra cả app và PostgreSQL.
 
-## Chạy local
+## Chạy nhanh bằng Docker
+
+```bash
+docker compose up -d --build
+```
+
+Ứng dụng:
+
+```text
+http://localhost:3000
+```
+
+Health check:
+
+```text
+http://localhost:3000/api/health
+```
+
+Database được lưu trong Docker volume `qlts_postgres_data`.
+
+## Chạy development
 
 Yêu cầu:
 
 - Node.js >= 22.20
 - pnpm 9.15.9
-- Docker (khuyến nghị cho PostgreSQL)
+- PostgreSQL 16 hoặc Docker
+
+Khởi động PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+Cài đặt và chuẩn bị database:
 
 ```bash
 cp .env.example .env
-docker compose up -d
-
 pnpm install
 pnpm db:generate
-pnpm db:push
+pnpm db:deploy
 pnpm db:seed
+```
+
+Chạy Next.js:
+
+```bash
 pnpm dev
 ```
 
-Web: http://localhost:3000
+## Database
 
-API: http://localhost:3001
+Schema chính nằm tại:
 
-Health check: http://localhost:3001/health
+```text
+prisma/schema.prisma
+```
+
+Các migration được commit trong:
+
+```text
+prisma/migrations/
+```
+
+Development khi sửa schema:
+
+```bash
+pnpm db:migrate
+```
+
+Production:
+
+```bash
+pnpm db:deploy
+```
 
 ## Nguyên tắc phát triển
 
-1. Không hardcode text giao diện trong page mới; thêm key vào i18n.
-2. Core không phụ thuộc Stripe, Crisp, PostHog hoặc Supabase.
-3. Schema nghiệp vụ nằm trong `packages/database`.
-4. Page chỉ gọi API qua `apps/web/src/lib/api.ts` để tận dụng cache/prefetch.
-5. Mọi thay đổi schema cần có migration khi chuyển sang môi trường production.
+1. Không tạo API nội bộ nếu Server Component hoặc Server Action giải quyết trực tiếp được.
+2. Không hardcode text giao diện trong component nghiệp vụ; thêm key vào `lib/i18n.ts`.
+3. Không phụ thuộc Stripe, Crisp, PostHog hoặc Supabase trong core.
+4. PostgreSQL là nguồn dữ liệu chính và được self-host.
+5. Mutation nghiệp vụ cần ghi audit log nếu ảnh hưởng tới trạng thái hoặc người giữ tài sản.
+6. Giữ dashboard layout ở server layout để sidebar không remount khi đổi trang.
+7. Interaction như search/filter chạy ở client; dữ liệu ban đầu được lấy ở server.
 
-## Bước tiếp theo
+## Backup PostgreSQL
 
-Foundation này chủ ý chưa nhồi toàn bộ chức năng của DATN vào một lần. Các module phù hợp để phát triển tiếp là QR/Barcode, import/export, kiểm kê, bàn giao/hoàn trả, bảo trì và phân quyền chi tiết.
+Ví dụ backup:
+
+```bash
+docker exec qlts-postgres pg_dump -U qlts -d qlts -Fc > qlts-backup.dump
+```
+
+Restore:
+
+```bash
+cat qlts-backup.dump | docker exec -i qlts-postgres pg_restore -U qlts -d qlts --clean --if-exists
+```
+
+## Hướng phát triển tiếp
+
+Các module tiếp theo nên phát triển độc lập trên foundation này:
+
+- QR / Barcode.
+- Import / Export Excel, CSV.
+- Kiểm kê tài sản.
+- Bảo trì / bảo hành.
+- Quản lý nhân viên đầy đủ.
+- RBAC và đăng nhập nội bộ.
+- File / hình ảnh bằng MinIO nếu cần self-host object storage.

@@ -7,15 +7,40 @@ services:
       POSTGRES_USER: qlts
       POSTGRES_PASSWORD: qlts
       POSTGRES_DB: qlts
-    ports:
-      - "5432:5432"
     volumes:
       - qlts_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qlts -d qlts"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qlts-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://qlts:qlts@postgres:5432/qlts?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   qlts_postgres_data:
