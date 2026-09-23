@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   MapPin,
   PackageSearch,
+  Users,
   Settings,
   Tags,
 } from "lucide-react";
@@ -15,6 +16,7 @@ type Labels = {
   assets: string;
   categories: string;
   locations: string;
+  employees: string;
   settings: string;
 };
 
@@ -23,6 +25,7 @@ const nav = [
   { href: "/assets", icon: PackageSearch, key: "assets" },
   { href: "/categories", icon: Tags, key: "categories" },
   { href: "/locations", icon: MapPin, key: "locations" },
+  { href: "/employees", icon: Users, key: "employees" },
   { href: "/settings", icon: Settings, key: "settings" },
 ] as const;
 
