@@ -1,3 +1,4 @@
+import { AssetStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   demoAssetDetails,
@@ -9,15 +10,48 @@ import {
 } from "@/lib/demo-data";
 import { isDemoMode } from "@/lib/runtime";
 
+function countDemoStatus(status: AssetStatus) {
+  return demoAssets.filter((asset) => asset.status === status).length;
+}
+
 export async function getDashboardData() {
   if (isDemoMode()) {
+    const total = demoAssets.length;
+    const inUse = countDemoStatus(AssetStatus.IN_USE);
+    const available = countDemoStatus(AssetStatus.AVAILABLE);
+    const maintenance = countDemoStatus(AssetStatus.MAINTENANCE);
+    const lost = countDemoStatus(AssetStatus.LOST);
+    const disposed = countDemoStatus(AssetStatus.DISPOSED);
+
     return {
-      total: demoAssets.length,
-      inUse: demoAssets.filter((asset) => asset.status === "IN_USE").length,
-      available: demoAssets.filter((asset) => asset.status === "AVAILABLE").length,
-      maintenance: demoAssets.filter((asset) => asset.status === "MAINTENANCE").length,
+      total,
+      inUse,
+      available,
+      maintenance,
+      lost,
+      disposed,
       categories: demoCategories.length,
       locations: demoLocations.length,
+      utilization: total ? Math.round((inUse / total) * 100) : 0,
+      statusReport: [
+        { status: AssetStatus.IN_USE, count: inUse },
+        { status: AssetStatus.AVAILABLE, count: available },
+        { status: AssetStatus.MAINTENANCE, count: maintenance },
+        { status: AssetStatus.LOST, count: lost },
+        { status: AssetStatus.DISPOSED, count: disposed },
+      ],
+      categoryReport: demoCategories
+        .map((category) => ({
+          name: category.name,
+          count: category._count.assets,
+        }))
+        .sort((a, b) => b.count - a.count),
+      locationReport: demoLocations
+        .map((location) => ({
+          name: location.name,
+          count: location._count.assets,
+        }))
+        .sort((a, b) => b.count - a.count),
       recent: demoAssets.slice(0, 7).map(({ id, code, name, status, updatedAt }) => ({
         id,
         code,
@@ -28,14 +62,25 @@ export async function getDashboardData() {
     };
   }
 
-  const [total, inUse, available, maintenance, categories, locations, recent] =
+  const [total, statusGroups, categoryRows, locationRows, recent] =
     await Promise.all([
       db.asset.count(),
-      db.asset.count({ where: { status: "IN_USE" } }),
-      db.asset.count({ where: { status: "AVAILABLE" } }),
-      db.asset.count({ where: { status: "MAINTENANCE" } }),
-      db.category.count(),
-      db.location.count(),
+      db.asset.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      db.category.findMany({
+        select: {
+          name: true,
+          _count: { select: { assets: true } },
+        },
+      }),
+      db.location.findMany({
+        select: {
+          name: true,
+          _count: { select: { assets: true } },
+        },
+      }),
       db.asset.findMany({
         select: {
           id: true,
@@ -49,17 +94,71 @@ export async function getDashboardData() {
       }),
     ]);
 
-  return { total, inUse, available, maintenance, categories, locations, recent };
+  const statusMap = new Map(
+    statusGroups.map((row) => [row.status, row._count._all]),
+  );
+  const statusCount = (status: AssetStatus) => statusMap.get(status) ?? 0;
+
+  const inUse = statusCount(AssetStatus.IN_USE);
+  const available = statusCount(AssetStatus.AVAILABLE);
+  const maintenance = statusCount(AssetStatus.MAINTENANCE);
+  const lost = statusCount(AssetStatus.LOST);
+  const disposed = statusCount(AssetStatus.DISPOSED);
+
+  return {
+    total,
+    inUse,
+    available,
+    maintenance,
+    lost,
+    disposed,
+    categories: categoryRows.length,
+    locations: locationRows.length,
+    utilization: total ? Math.round((inUse / total) * 100) : 0,
+    statusReport: [
+      { status: AssetStatus.IN_USE, count: inUse },
+      { status: AssetStatus.AVAILABLE, count: available },
+      { status: AssetStatus.MAINTENANCE, count: maintenance },
+      { status: AssetStatus.LOST, count: lost },
+      { status: AssetStatus.DISPOSED, count: disposed },
+    ],
+    categoryReport: categoryRows
+      .map((category) => ({
+        name: category.name,
+        count: category._count.assets,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6),
+    locationReport: locationRows
+      .map((location) => ({
+        name: location.name,
+        count: location._count.assets,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6),
+    recent,
+  };
 }
 
 export async function getAssets() {
   if (isDemoMode()) {
     return demoAssets.map(
-      ({ id, code, name, serialNumber, status, category, location, custodian }) => ({
+      ({
         id,
         code,
         name,
         serialNumber,
+        barcode,
+        status,
+        category,
+        location,
+        custodian,
+      }) => ({
+        id,
+        code,
+        name,
+        serialNumber,
+        barcode,
         status,
         category,
         location,
@@ -74,6 +173,7 @@ export async function getAssets() {
       code: true,
       name: true,
       serialNumber: true,
+      barcode: true,
       status: true,
       category: { select: { name: true } },
       location: { select: { name: true } },
@@ -162,6 +262,15 @@ export async function getAssetDetail(id: string) {
       category: true,
       location: true,
       custodian: true,
+      image: {
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          size: true,
+          updatedAt: true,
+        },
+      },
       assignments: {
         include: { employee: true },
         orderBy: { assignedAt: "desc" },

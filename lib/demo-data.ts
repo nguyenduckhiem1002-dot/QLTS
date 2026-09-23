@@ -111,6 +111,7 @@ export const demoAssets = [
     code: "TS-IT-0001",
     name: "MacBook Pro 14",
     serialNumber: "QLTS-DEMO-0001",
+    barcode: "8938501000012",
     description: "Máy tính làm việc cho bộ phận CNTT.",
     status: AssetStatus.IN_USE,
     category: { name: "Thiết bị IT" },
@@ -124,6 +125,7 @@ export const demoAssets = [
     code: "TS-IT-0002",
     name: "Màn hình Dell 27",
     serialNumber: "QLTS-DEMO-0002",
+    barcode: "TS-IT-0002",
     description: "Màn hình làm việc 27 inch.",
     status: AssetStatus.AVAILABLE,
     category: { name: "Thiết bị IT" },
@@ -137,6 +139,7 @@ export const demoAssets = [
     code: "TS-VP-0001",
     name: "Máy in văn phòng",
     serialNumber: "QLTS-DEMO-0003",
+    barcode: "TS-VP-0001",
     description: "Máy in dùng chung khu vực vận hành.",
     status: AssetStatus.MAINTENANCE,
     category: { name: "Thiết bị văn phòng" },
@@ -150,6 +153,7 @@ export const demoAssets = [
     code: "TS-CC-0001",
     name: "Máy khoan pin",
     serialNumber: "QLTS-DEMO-0004",
+    barcode: "TS-CC-0001",
     description: "Dụng cụ bảo trì tại kho.",
     status: AssetStatus.AVAILABLE,
     category: { name: "Máy móc & công cụ" },
@@ -162,6 +166,7 @@ export const demoAssets = [
 
 export const demoAssetDetails = demoAssets.map((asset) => ({
   ...asset,
+  image: null,
   assignments:
     asset.id === "demo-asset-1"
       ? [
