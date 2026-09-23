@@ -1,4 +1,9 @@
-import { AssetStatus, LocationType } from "@prisma/client";
+import {
+  AssetStatus,
+  LocationType,
+  UserRole,
+  UserStatus,
+} from "@prisma/client";
 
 const updatedAt = new Date("2026-09-23T09:30:00.000Z");
 
@@ -64,6 +69,39 @@ export const demoEmployees = [
     email: "lan@example.local",
     department: "Hành chính",
     _count: { assets: 0 },
+  },
+];
+
+export const demoUsers = [
+  {
+    id: "demo-admin",
+    name: "Demo Admin",
+    email: "admin@casla.local",
+    role: UserRole.ADMIN,
+    status: UserStatus.ACTIVE,
+    mustChangePassword: false,
+    lastLoginAt: new Date("2026-09-23T08:30:00.000Z"),
+    createdAt: new Date("2026-09-01T02:00:00.000Z"),
+  },
+  {
+    id: "demo-manager",
+    name: "Nguyễn Văn An",
+    email: "an@casla.local",
+    role: UserRole.ASSET_MANAGER,
+    status: UserStatus.ACTIVE,
+    mustChangePassword: false,
+    lastLoginAt: new Date("2026-09-22T07:20:00.000Z"),
+    createdAt: new Date("2026-09-02T02:00:00.000Z"),
+  },
+  {
+    id: "demo-viewer",
+    name: "Lê Thu Lan",
+    email: "lan@casla.local",
+    role: UserRole.VIEWER,
+    status: UserStatus.INVITED,
+    mustChangePassword: false,
+    lastLoginAt: null,
+    createdAt: new Date("2026-09-20T02:00:00.000Z"),
   },
 ];
 

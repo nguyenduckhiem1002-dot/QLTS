@@ -5,6 +5,7 @@ import {
   demoCategories,
   demoEmployees,
   demoLocations,
+  demoUsers,
 } from "@/lib/demo-data";
 import { isDemoMode } from "@/lib/runtime";
 
@@ -107,6 +108,24 @@ export async function getEmployees() {
   return db.employee.findMany({
     include: { _count: { select: { assets: true } } },
     orderBy: [{ name: "asc" }, { employeeCode: "asc" }],
+  });
+}
+
+export async function getUsersForAdmin() {
+  if (isDemoMode()) return demoUsers;
+
+  return db.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      mustChangePassword: true,
+      lastLoginAt: true,
+      createdAt: true,
+    },
+    orderBy: [{ status: "asc" }, { name: "asc" }],
   });
 }
 

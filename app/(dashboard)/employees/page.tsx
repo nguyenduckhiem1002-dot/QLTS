@@ -1,4 +1,6 @@
 import { createEmployee } from "@/lib/actions/reference";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/session";
 import { getEmployees } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
@@ -6,11 +8,13 @@ import { isDemoMode } from "@/lib/runtime";
 export const metadata = { title: "Nhân viên" };
 
 export default async function EmployeesPage() {
-  const [{ t }, employees] = await Promise.all([
+  const [{ t }, employees, currentUser] = await Promise.all([
     getTranslations(),
     getEmployees(),
+    getCurrentUser(),
   ]);
   const demoMode = isDemoMode();
+  const canManage = hasPermission(currentUser?.role, "reference:write");
 
   return (
     <section className="page">
@@ -67,21 +71,21 @@ export default async function EmployeesPage() {
           </div>
           <label>
             <span>{t("employees.code")}</span>
-            <input name="employeeCode" required disabled={demoMode} />
+            <input name="employeeCode" required disabled={demoMode || !canManage} />
           </label>
           <label>
             <span>{t("employees.name")}</span>
-            <input name="name" required disabled={demoMode} />
+            <input name="name" required disabled={demoMode || !canManage} />
           </label>
           <label>
             <span>{t("employees.department")}</span>
-            <input name="department" disabled={demoMode} />
+            <input name="department" disabled={demoMode || !canManage} />
           </label>
           <label>
             <span>{t("employees.email")}</span>
-            <input name="email" type="email" disabled={demoMode} />
+            <input name="email" type="email" disabled={demoMode || !canManage} />
           </label>
-          <button className="button button-primary" type="submit" disabled={demoMode}>
+          <button className="button button-primary" type="submit" disabled={demoMode || !canManage}>
             {t("common.create")}
           </button>
         </form>

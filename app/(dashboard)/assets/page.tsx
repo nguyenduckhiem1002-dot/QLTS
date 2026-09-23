@@ -1,13 +1,20 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { AssetTable, type AssetRow } from "@/components/asset-table";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/session";
 import { getAssets } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 
 export const metadata = { title: "Tài sản" };
 
 export default async function AssetsPage() {
-  const [{ t }, assets] = await Promise.all([getTranslations(), getAssets()]);
+  const [{ t }, assets, user] = await Promise.all([
+    getTranslations(),
+    getAssets(),
+    getCurrentUser(),
+  ]);
+  const canManage = hasPermission(user?.role, "assets:write");
 
   return (
     <section className="page">
@@ -18,10 +25,12 @@ export default async function AssetsPage() {
           <p>{t("assets.subtitle")}</p>
         </div>
 
-        <Link href="/assets/new" className="button button-primary">
-          <Plus size={16} aria-hidden="true" />
-          {t("assets.add")}
-        </Link>
+        {canManage ? (
+          <Link href="/assets/new" className="button button-primary">
+            <Plus size={16} aria-hidden="true" />
+            {t("assets.add")}
+          </Link>
+        ) : null}
       </header>
 
       <AssetTable

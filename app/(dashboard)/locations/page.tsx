@@ -1,5 +1,7 @@
 import { LocationType } from "@prisma/client";
 import { createLocation } from "@/lib/actions/reference";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/session";
 import { getLocations } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
@@ -7,11 +9,13 @@ import { isDemoMode } from "@/lib/runtime";
 export const metadata = { title: "Vị trí" };
 
 export default async function LocationsPage() {
-  const [{ t }, locations] = await Promise.all([
+  const [{ t }, locations, currentUser] = await Promise.all([
     getTranslations(),
     getLocations(),
+    getCurrentUser(),
   ]);
   const demoMode = isDemoMode();
+  const canManage = hasPermission(currentUser?.role, "reference:write");
 
   return (
     <section className="page">
@@ -55,11 +59,11 @@ export default async function LocationsPage() {
           </div>
           <label>
             <span>{t("locations.name")}</span>
-            <input name="name" required disabled={demoMode} />
+            <input name="name" required disabled={demoMode || !canManage} />
           </label>
           <label>
             <span>{t("locations.type")}</span>
-            <select name="type" defaultValue={LocationType.OFFICE} disabled={demoMode}>
+            <select name="type" defaultValue={LocationType.OFFICE} disabled={demoMode || !canManage}>
               {Object.values(LocationType).map((type) => (
                 <option value={type} key={type}>
                   {t(`location.${type}`)}
@@ -69,9 +73,9 @@ export default async function LocationsPage() {
           </label>
           <label>
             <span>{t("locations.address")}</span>
-            <input name="address" disabled={demoMode} />
+            <input name="address" disabled={demoMode || !canManage} />
           </label>
-          <button className="button button-primary" type="submit" disabled={demoMode}>
+          <button className="button button-primary" type="submit" disabled={demoMode || !canManage}>
             {t("common.create")}
           </button>
         </form>

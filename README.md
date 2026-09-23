@@ -1,4 +1,4 @@
-# QLTS
+# Casla Assets
 
 QLTS là hệ thống quản lý tài sản nội bộ, xây dựng theo hướng self-host, ít phụ thuộc dịch vụ cloud và ưu tiên trải nghiệm điều hướng nhanh.
 
@@ -177,3 +177,78 @@ Health check trong demo mode trả:
   "database": "not-required"
 }
 ```
+
+
+## Đăng nhập và phân quyền
+
+Casla Assets dùng tài khoản và session lưu trực tiếp trong PostgreSQL, không phụ thuộc Supabase/Auth0.
+
+| Vai trò | Quyền |
+| --- | --- |
+| `ADMIN` | Toàn quyền, quản lý tài khoản, role và SMTP test |
+| `ASSET_MANAGER` | Tạo/sửa nghiệp vụ tài sản, danh mục, vị trí, nhân viên và bàn giao |
+| `VIEWER` | Chỉ xem dữ liệu |
+
+Session được lưu bằng token ngẫu nhiên; trình duyệt chỉ giữ token trong cookie HttpOnly và database chỉ lưu SHA-256 của token.
+
+### Tạo Admin đầu tiên
+
+Trong `.env`:
+
+```env
+QLTS_BOOTSTRAP_ADMIN_NAME="Quản trị Casla"
+QLTS_BOOTSTRAP_ADMIN_EMAIL="admin@company.local"
+QLTS_BOOTSTRAP_ADMIN_PASSWORD="mat-khau-tam-toi-thieu-10-ky-tu"
+```
+
+Khi Docker app khởi động sau migration, bootstrap chỉ tạo Admin nếu bảng User đang trống. Admin phải đổi mật khẩu ở lần đăng nhập đầu. Sau khi đăng nhập thành công, nên xóa `QLTS_BOOTSTRAP_ADMIN_PASSWORD` khỏi môi trường.
+
+Nếu chạy development có thể bootstrap thủ công:
+
+```bash
+pnpm admin:bootstrap
+```
+
+## SMTP cấp tài khoản
+
+SMTP chỉ đọc từ environment; mật khẩu SMTP không lưu trong database.
+
+```env
+APP_BASE_URL="https://assets.casla.local"
+
+SMTP_HOST="smtp.example.com"
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER="no-reply@example.com"
+SMTP_PASS="app-password-or-smtp-password"
+SMTP_FROM="Casla Assets <no-reply@example.com>"
+```
+
+Thông thường:
+
+- Port 587: `SMTP_SECURE=false` và dùng STARTTLS.
+- Port 465: `SMTP_SECURE=true`.
+- SMTP relay nội bộ không yêu cầu auth có thể để trống `SMTP_USER` và `SMTP_PASS`.
+
+Admin vào **Tài khoản & phân quyền** để kiểm tra trạng thái SMTP và gửi mail test tới chính email Admin.
+
+Có hai cách cấp tài khoản:
+
+1. **Gửi lời mời qua email**: hệ thống tạo link kích hoạt dùng một lần, có hạn 24 giờ; người dùng tự đặt mật khẩu.
+2. **Tạo trực tiếp**: Admin đặt mật khẩu tạm và cung cấp riêng cho người dùng. Hệ thống không gửi mật khẩu plaintext qua email và bắt đổi mật khẩu ở lần đăng nhập đầu.
+
+## Cookie khi self-host
+
+Nếu app chạy HTTP trong mạng nội bộ:
+
+```env
+AUTH_COOKIE_SECURE=false
+```
+
+Nếu app được đặt sau HTTPS reverse proxy:
+
+```env
+AUTH_COOKIE_SECURE=true
+```
+
+Vercel preview vẫn tự chạy demo read-only và không yêu cầu database/login thật.
