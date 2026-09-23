@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  LOST
+  DISPOSED
+}
+
+enum LocationType {
+  OFFICE
+  WAREHOUSE
+  ROOM
+  AREA
+  OTHER
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  assets      Asset[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Location {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  type        LocationType @default(OFFICE)
+  address     String?
+  description String?
+  assets      Asset[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Employee {
+  id           String            @id @default(cuid())
+  employeeCode String            @unique
+  name         String
+  email        String?           @unique
+  department   String?
+  assets       Asset[]           @relation("CurrentCustodian")
+  assignments  AssetAssignment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([name])
+}
+
+model Asset {
+  id           String            @id @default(cuid())
+  code         String            @unique
+  name         String
+  serialNumber String?           @unique
+  description  String?
+  status       AssetStatus       @default(AVAILABLE)
+  purchaseDate DateTime?
+  purchaseCost Decimal?          @db.Decimal(14, 2)
+  categoryId   String?
+  locationId   String?
+  custodianId  String?
+  category     Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  location     Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  custodian    Employee?         @relation("CurrentCustodian", fields: [custodianId], references: [id], onDelete: SetNull)
+  assignments  AssetAssignment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([name])
+  @@index([status])
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([custodianId])
+}
+
+model AssetAssignment {
+  id         String    @id @default(cuid())
+  assetId    String
+  employeeId String
+  assignedAt DateTime  @default(now())
+  returnedAt DateTime?
+  note       String?
+  asset      Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, assignedAt])
+  @@index([employeeId, assignedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actor      String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@qlts/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "lucide-react": "^1.8.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "react-router-dom": "7.16.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.5"
+  }
+}
