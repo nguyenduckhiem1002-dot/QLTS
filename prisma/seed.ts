@@ -1,4 +1,11 @@
+import { loadEnvFile } from "node:process";
 import { AssetStatus, LocationType, PrismaClient } from "@prisma/client";
+
+try {
+  loadEnvFile(".env");
+} catch {
+  // CI and Docker provide DATABASE_URL through the process environment.
+}
 
 const prisma = new PrismaClient();
 
