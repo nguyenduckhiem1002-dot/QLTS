@@ -10,7 +10,7 @@ export type AssetImageUpload = {
   fileName: string;
   mimeType: string;
   size: number;
-  data: Buffer;
+  data: Uint8Array<ArrayBuffer>;
 };
 
 export class AssetImageError extends Error {
@@ -41,10 +41,12 @@ export async function parseAssetImage(
     );
   }
 
+  const arrayBuffer = await entry.arrayBuffer();
+
   return {
     fileName: entry.name || "asset-image",
     mimeType: entry.type,
     size: entry.size,
-    data: Buffer.from(await entry.arrayBuffer()),
+    data: new Uint8Array(arrayBuffer),
   };
 }

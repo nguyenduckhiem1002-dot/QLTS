@@ -1,4 +1,4 @@
-import bwipjs from "bwip-js";
+import bwipjs from "@bwip-js/node";
 import { getCurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { demoAssets } from "@/lib/demo-data";
