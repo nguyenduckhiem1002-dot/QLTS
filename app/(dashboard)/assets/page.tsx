@@ -39,6 +39,7 @@ export default async function AssetsPage() {
           search: t("assets.search"),
           allStatuses: t("assets.allStatuses"),
           code: t("assets.code"),
+          barcode: t("assets.barcode"),
           name: t("assets.name"),
           category: t("assets.category"),
           location: t("assets.location"),

@@ -158,14 +158,14 @@ Các module tiếp theo nên phát triển độc lập trên foundation này:
 - File / hình ảnh bằng MinIO nếu cần self-host object storage.
 
 
-## Preview trên Vercel
+## Chế độ database / demo
 
-Vercel được dùng để review giao diện và tự động chạy ở chế độ demo read-only.
+QLTS ưu tiên dùng PostgreSQL thật ở mọi môi trường, bao gồm Vercel.
 
-- Khi `VERCEL=1`, QLTS mặc định dùng dữ liệu mẫu và không kết nối PostgreSQL.
-- Có thể ép demo ở bất kỳ môi trường nào bằng `QLTS_DEMO_MODE=true`.
-- Có thể ép Vercel dùng database thật bằng `QLTS_DEMO_MODE=false`, nhưng `DATABASE_URL` khi đó phải là PostgreSQL mà hạ tầng Vercel truy cập được.
-- PostgreSQL nằm trong LAN / Docker nội bộ nên được dùng cho deployment self-host, không dùng trực tiếp cho preview public.
+- Nếu có `DATABASE_URL`: ứng dụng dùng database thật.
+- Nếu không có `DATABASE_URL`: ứng dụng tự fallback sang demo read-only.
+- Đặt `QLTS_DEMO_MODE=true` để chủ động ép demo.
+- Đặt `QLTS_DEMO_MODE=false` để chủ động ép dùng database; khi đó cần `DATABASE_URL` hợp lệ.
 
 Health check trong demo mode trả:
 
@@ -251,4 +251,18 @@ Nếu app được đặt sau HTTPS reverse proxy:
 AUTH_COOKIE_SECURE=true
 ```
 
-Vercel preview vẫn tự chạy demo read-only và không yêu cầu database/login thật.
+Vercel sẽ dùng PostgreSQL thật nếu project có `DATABASE_URL`. Chỉ dùng demo khi không có database hoặc khi đặt `QLTS_DEMO_MODE=true`.
+
+
+## Ảnh tài sản, barcode và dashboard report
+
+Từ phiên bản 0.4:
+
+- Mỗi tài sản có thể có một ảnh chính JPEG/PNG/WebP, tối đa 4 MB.
+- Ảnh được lưu trong bảng `AssetImage` riêng dưới dạng `BYTEA` để các truy vấn danh sách/report không tải blob.
+- Có thể thêm, thay hoặc xóa ảnh từ trang chi tiết tài sản.
+- Mỗi tài sản có `barcode` unique. Nếu để trống khi tạo, hệ thống dùng `code` làm giá trị barcode.
+- Barcode được render dạng Code128 SVG tại `/api/assets/:id/barcode`, phù hợp để quét hoặc mở riêng để in tem.
+- Dashboard có report tỷ lệ sử dụng, phân bố trạng thái, top danh mục và top vị trí.
+
+Server Actions được cấu hình body limit 5 MB; ứng dụng chủ động giới hạn file ảnh ở 4 MB.
