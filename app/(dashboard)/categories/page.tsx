@@ -1,4 +1,6 @@
 import { createCategory } from "@/lib/actions/reference";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/session";
 import { getCategories } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
@@ -6,11 +8,13 @@ import { isDemoMode } from "@/lib/runtime";
 export const metadata = { title: "Danh mục" };
 
 export default async function CategoriesPage() {
-  const [{ t }, categories] = await Promise.all([
+  const [{ t }, categories, currentUser] = await Promise.all([
     getTranslations(),
     getCategories(),
+    getCurrentUser(),
   ]);
   const demoMode = isDemoMode();
+  const canManage = hasPermission(currentUser?.role, "reference:write");
 
   return (
     <section className="page">
@@ -51,13 +55,13 @@ export default async function CategoriesPage() {
           </div>
           <label>
             <span>{t("categories.name")}</span>
-            <input name="name" required disabled={demoMode} />
+            <input name="name" required disabled={demoMode || !canManage} />
           </label>
           <label>
             <span>{t("categories.description")}</span>
-            <textarea name="description" rows={4} disabled={demoMode} />
+            <textarea name="description" rows={4} disabled={demoMode || !canManage} />
           </label>
-          <button className="button button-primary" type="submit" disabled={demoMode}>
+          <button className="button button-primary" type="submit" disabled={demoMode || !canManage}>
             {t("common.create")}
           </button>
         </form>
