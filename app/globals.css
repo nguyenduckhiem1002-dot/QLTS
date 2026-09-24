@@ -59,7 +59,8 @@
   --radius-box: 12px;
 
   --sidebar-w: 236px;
-  --content-max: 1460px;
+  /* Data pages fill the main column; only very wide screens get a cap. */
+  --content-max: 1920px;
   --topbar-h: 60px;
 }
 
@@ -470,11 +471,14 @@ kbd {
   gap: 20px;
   width: 100%;
   max-width: var(--content-max);
+  margin-inline: auto;
   padding: 26px 32px 64px;
 }
 
+/* Form pages share the data pages' left edge and width; the form grid itself
+   keeps inputs a sensible size. */
 .page-narrow {
-  max-width: 1180px;
+  max-width: var(--content-max);
 }
 
 .page-head {

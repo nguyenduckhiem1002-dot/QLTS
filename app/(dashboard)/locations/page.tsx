@@ -44,7 +44,7 @@ export default async function LocationsPage({
   const error = params.error ? errorMessages[params.error] : undefined;
 
   return (
-    <section className="page page-narrow">
+    <section className="page">
       <header className="page-head">
         <div>
           <h1>{t("locations.title")}</h1>

@@ -43,7 +43,7 @@ export default async function CategoriesPage({
   const error = params.error ? errorMessages[params.error] : undefined;
 
   return (
-    <section className="page page-narrow">
+    <section className="page">
       <header className="page-head">
         <div>
           <h1>{t("categories.title")}</h1>
