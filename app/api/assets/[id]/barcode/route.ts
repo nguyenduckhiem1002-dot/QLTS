@@ -1,5 +1,5 @@
-import bwipjs from "@bwip-js/node";
 import { getCurrentUser } from "@/lib/auth/session";
+import { code128Svg, svgResponse } from "@/lib/barcode";
 import { db } from "@/lib/db";
 import { demoAssets } from "@/lib/demo-data";
 import { isDemoMode } from "@/lib/runtime";
@@ -28,26 +28,5 @@ export async function GET(
     return new Response("Asset not found", { status: 404 });
   }
 
-  const barcode = asset.barcode || asset.code;
-
-  try {
-    const svg = bwipjs.toSVG({
-      bcid: "code128",
-      text: barcode,
-      scale: 2,
-      height: 12,
-      includetext: true,
-      textxalign: "center",
-      backgroundcolor: "FFFFFF",
-    });
-
-    return new Response(svg, {
-      headers: {
-        "Content-Type": "image/svg+xml; charset=utf-8",
-        "Cache-Control": "private, max-age=300",
-      },
-    });
-  } catch {
-    return new Response("Invalid barcode", { status: 422 });
-  }
+  return svgResponse(code128Svg(asset.barcode || asset.code));
 }

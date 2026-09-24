@@ -1,13 +1,13 @@
 import { LocationType } from "@prisma/client";
-import { ChevronRight, MapPin } from "lucide-react";
+import { MapPin, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { ConfirmSubmit } from "@/components/confirm-submit";
-import { SubmitButton } from "@/components/submit-button";
-import { EmptyState, FieldLabel, Notice, ReadonlyPanel } from "@/components/ui";
+import { EmptyState, Notice, ReadonlyNotice } from "@/components/ui";
 import { createLocation, deleteLocation, updateLocation } from "@/lib/actions/reference";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getLocations } from "@/lib/data";
+import { fill } from "@/lib/format";
 import { getTranslations, type TranslationKey } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
 
@@ -39,170 +39,181 @@ export default async function LocationsPage({
   const demoMode = isDemoMode();
   const canManage = hasPermission(currentUser?.role, "reference:write");
   const locked = demoMode || !canManage;
-  const editing = canManage ? locations.find((location) => location.id === params.edit) : undefined;
+  const editingId = canManage && !demoMode ? params.edit : undefined;
   const saved = params.saved ? savedMessages[params.saved] : undefined;
   const error = params.error ? errorMessages[params.error] : undefined;
 
   return (
-    <section className="page">
-      <header className="page-header page-header-row">
+    <section className="page page-narrow">
+      <header className="page-head">
         <div>
           <h1>{t("locations.title")}</h1>
           <p>{t("locations.subtitle")}</p>
         </div>
-        <p className="header-count">
-          <strong>{locations.length}</strong> {t("locations.count")}
-        </p>
       </header>
 
       {saved ? <Notice tone="success">{t(saved)}</Notice> : null}
       {error ? <Notice tone="error">{t(error)}</Notice> : null}
+      {!canManage && !demoMode ? (
+        <ReadonlyNotice title={t("common.readonlyTitle")} message={t("common.readonlyMessage")} />
+      ) : null}
 
-      <div className="split-layout">
-        <section className="collection-surface" aria-label={t("locations.title")}>
-          {locations.length === 0 ? (
-            <EmptyState
-              icon={MapPin}
-              title={t("locations.emptyTitle")}
-              description={locked ? undefined : t("locations.emptyHelp")}
-            />
-          ) : (
-            <>
-              <div className={`collection-heading${canManage ? " collection-heading-link" : ""}`}>
-                <span>{t("locations.name")}</span>
-                <span>{t("locations.assetCount")}</span>
-                {canManage ? <span aria-hidden="true" /> : null}
-              </div>
-              {locations.map((location) => {
-                const content = (
-                  <>
-                    <div>
-                      <div className="collection-title-line">
-                        <h2>{location.name}</h2>
-                        <span className="quiet-tag">{t(`location.${location.type}`)}</span>
-                      </div>
-                      {location.address ? <p>{location.address}</p> : null}
+      {/* Forms live outside the table; inputs join them through the form attribute. */}
+      <form id="location-add" action={createLocation} />
+      {editingId ? <form id="location-edit" action={updateLocation} /> : null}
+
+      <div className="surface">
+        <div className="surface-head">
+          <h2>{fill(t("locations.countLabel"), { n: locations.length })}</h2>
+        </div>
+        <div className="table-wrap">
+          <table className="ref-table">
+            <thead>
+              <tr>
+                <th>{t("locations.name")}</th>
+                <th>{t("locations.type")}</th>
+                <th>{t("locations.address")}</th>
+                <th className="num-col">{t("locations.assetCount")}</th>
+                {canManage ? (
+                  <th>
+                    <span className="sr-only">{t("users.actions")}</span>
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {canManage ? (
+                <tr className="ref-add">
+                  <td>
+                    <input
+                      form="location-add"
+                      name="name"
+                      required
+                      autoComplete="off"
+                      placeholder={t("locations.namePlaceholder")}
+                      aria-label={t("locations.name")}
+                      disabled={locked}
+                    />
+                  </td>
+                  <td>
+                    <select form="location-add" name="type" defaultValue={LocationType.OFFICE} aria-label={t("locations.type")} disabled={locked}>
+                      {Object.values(LocationType).map((type) => (
+                        <option key={type} value={type}>
+                          {t(`location.${type}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      form="location-add"
+                      name="address"
+                      autoComplete="off"
+                      placeholder={t("locations.addressPlaceholder")}
+                      aria-label={t("locations.address")}
+                      disabled={locked}
+                    />
+                  </td>
+                  <td />
+                  <td>
+                    <div className="ref-actions">
+                      <button className="btn btn-primary btn-sm" type="submit" form="location-add" disabled={locked}>
+                        <Plus size={15} aria-hidden="true" />
+                        {t("common.add")}
+                      </button>
                     </div>
-                    <strong className="collection-count">{location._count.assets}</strong>
-                  </>
-                );
-                return canManage ? (
-                  <Link
-                    key={location.id}
-                    href={`/locations?edit=${location.id}`}
-                    scroll={false}
-                    className={`collection-row collection-row-link${
-                      editing?.id === location.id ? " is-selected" : ""
-                    }`}
-                    aria-current={editing?.id === location.id ? "true" : undefined}
-                  >
-                    {content}
-                    <ChevronRight className="row-chevron" size={16} aria-hidden="true" />
-                  </Link>
-                ) : (
-                  <article className="collection-row" key={location.id}>
-                    {content}
-                  </article>
-                );
-              })}
-            </>
-          )}
-        </section>
+                  </td>
+                </tr>
+              ) : null}
 
-        {locked && !demoMode ? (
-          <ReadonlyPanel
-            title={t("common.readonlyTitle")}
-            message={t("common.readonlyMessage")}
+              {locations.map((location) =>
+                location.id === editingId ? (
+                  <tr className="ref-edit" key={location.id}>
+                    <td>
+                      <input form="location-edit" type="hidden" name="id" value={location.id} />
+                      <input
+                        form="location-edit"
+                        name="name"
+                        required
+                        autoFocus
+                        autoComplete="off"
+                        defaultValue={location.name}
+                        aria-label={t("locations.name")}
+                      />
+                    </td>
+                    <td>
+                      <select form="location-edit" name="type" defaultValue={location.type} aria-label={t("locations.type")}>
+                        {Object.values(LocationType).map((type) => (
+                          <option key={type} value={type}>
+                            {t(`location.${type}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        form="location-edit"
+                        name="address"
+                        autoComplete="off"
+                        defaultValue={location.address ?? ""}
+                        aria-label={t("locations.address")}
+                      />
+                    </td>
+                    <td className="num-col num">{location._count.assets}</td>
+                    <td>
+                      <div className="ref-actions">
+                        <form action={deleteLocation}>
+                          <input type="hidden" name="id" value={location.id} />
+                          <ConfirmSubmit label={t("common.delete")} message={t("locations.deleteConfirm")} />
+                        </form>
+                        <Link className="btn btn-sm" href="/locations" scroll={false}>
+                          {t("common.cancel")}
+                        </Link>
+                        <button className="btn btn-primary btn-sm" type="submit" form="location-edit">
+                          {t("common.save")}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={location.id}>
+                    <td>
+                      <span className="cell-title">{location.name}</span>
+                    </td>
+                    <td>
+                      <span className="quiet-tag">{t(`location.${location.type}`)}</span>
+                    </td>
+                    <td className={location.address ? undefined : "cell-muted"}>{location.address ?? "-"}</td>
+                    <td className="num-col">
+                      <Link className="ref-count num" href={`/assets?location=${encodeURIComponent(location.name)}`}>
+                        {location._count.assets}
+                      </Link>
+                    </td>
+                    {canManage ? (
+                      <td>
+                        <div className="ref-actions">
+                          {locked ? null : (
+                            <Link className="btn btn-ghost btn-sm" href={`/locations?edit=${location.id}`} scroll={false}>
+                              <Pencil size={14} aria-hidden="true" />
+                              {t("common.edit")}
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </div>
+        {locations.length === 0 ? (
+          <EmptyState
+            icon={MapPin}
+            title={t("locations.emptyTitle")}
+            description={locked ? undefined : t("locations.emptyHelp")}
           />
-        ) : (
-          <aside className="panel side-panel">
-            <form
-              key={editing?.id ?? "new"}
-              action={editing ? updateLocation : createLocation}
-              className="side-form"
-            >
-              {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
-              <header className="side-form-header">
-                <h2>{editing ? t("locations.edit") : t("locations.create")}</h2>
-                <p>{editing ? t("locations.editHelp") : t("locations.createHelp")}</p>
-              </header>
-
-              <div className="side-form-body">
-                <label>
-                  <FieldLabel required requiredLabel={t("common.required")}>
-                    {t("locations.name")}
-                  </FieldLabel>
-                  <input
-                    name="name"
-                    required
-                    autoComplete="off"
-                    defaultValue={editing?.name}
-                    placeholder={t("locations.namePlaceholder")}
-                    disabled={locked}
-                  />
-                </label>
-
-                <fieldset className="choice-group" disabled={locked}>
-                  <legend className="field-label">{t("locations.type")}</legend>
-                  <div className="choice-options">
-                    {Object.values(LocationType).map((type) => (
-                      <label className="choice-chip" key={type}>
-                        <input
-                          type="radio"
-                          name="type"
-                          value={type}
-                          defaultChecked={type === (editing?.type ?? LocationType.OFFICE)}
-                        />
-                        <span>{t(`location.${type}`)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-
-                <label>
-                  <FieldLabel optionalLabel={t("common.optional")}>
-                    {t("locations.address")}
-                  </FieldLabel>
-                  <input
-                    name="address"
-                    autoComplete="off"
-                    defaultValue={editing?.address ?? ""}
-                    placeholder={t("locations.addressPlaceholder")}
-                    disabled={locked}
-                  />
-                </label>
-              </div>
-
-              <footer className="side-form-footer">
-                {editing ? (
-                  <div className="side-form-actions">
-                    <Link className="button button-secondary" href="/locations" scroll={false}>
-                      {t("common.cancel")}
-                    </Link>
-                    <SubmitButton className="button button-primary" disabled={locked} pendingLabel={t("common.saving")}>
-                      {t("common.saveChanges")}
-                    </SubmitButton>
-                  </div>
-                ) : (
-                  <SubmitButton className="button button-primary button-block" disabled={locked} pendingLabel={t("common.saving")}>
-                    {t("locations.create")}
-                  </SubmitButton>
-                )}
-              </footer>
-            </form>
-
-            {editing ? (
-              <form action={deleteLocation} className="side-form-danger">
-                <input type="hidden" name="id" value={editing.id} />
-                <ConfirmSubmit
-                  label={t("common.delete")}
-                  message={t("locations.deleteConfirm")}
-                  disabled={locked}
-                />
-              </form>
-            ) : null}
-          </aside>
-        )}
+        ) : null}
       </div>
     </section>
   );

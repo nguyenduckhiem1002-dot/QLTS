@@ -68,3 +68,13 @@ This is the visual source of truth for QLTS. It is intentionally optimized for a
 - Search fields have an accessible name independent from placeholder text.
 - Icon-only navigation items expose aria-labels.
 - Include a skip-to-content link.
+
+## Patterns (v2)
+
+- Sidebar groups navigation into Operations, Reference data and Admin. The Casla logo files in `public/` are used as-is; never redraw or recolor them.
+- Top bar: breadcrumb plus one global asset search (`/` focuses it).
+- Secondary tasks (handover, new account) open in a right-side drawer (`components/drawer.tsx`) instead of taking a permanent column.
+- Reference tables (categories, locations) add and edit inline in the table.
+- Asset tag yellow appears on asset codes, the printed label and the label preview only.
+- Dark mode follows `prefers-color-scheme` through the tokens in `app/globals.css`.
+- Copy: no em or en dashes in UI text; at most one middle dot per line.

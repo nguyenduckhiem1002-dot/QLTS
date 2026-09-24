@@ -194,3 +194,40 @@ export const demoAssetDetails = demoAssets.map((asset) => ({
           ]
         : [],
 }));
+
+const hoursAgo = (hours: number) => new Date(updatedAt.getTime() - hours * 3_600_000);
+
+export const demoActivity = [
+  {
+    id: "demo-log-1",
+    action: "ASSIGN",
+    createdAt: hoursAgo(2),
+    actor: "Demo Admin",
+    asset: { id: "demo-asset-1", code: "TS-IT-0001", name: "MacBook Pro 14" },
+    employeeName: "Nguyễn Văn An",
+  },
+  {
+    id: "demo-log-2",
+    action: "UPDATE",
+    createdAt: hoursAgo(26),
+    actor: "Nguyễn Văn An",
+    asset: { id: "demo-asset-3", code: "TS-VP-0001", name: "Máy in văn phòng" },
+    employeeName: null,
+  },
+  {
+    id: "demo-log-3",
+    action: "RETURN",
+    createdAt: hoursAgo(50),
+    actor: "Demo Admin",
+    asset: { id: "demo-asset-2", code: "TS-IT-0002", name: "Màn hình Dell 27" },
+    employeeName: null,
+  },
+  {
+    id: "demo-log-4",
+    action: "CREATE",
+    createdAt: hoursAgo(74),
+    actor: "Demo Admin",
+    asset: { id: "demo-asset-4", code: "TS-CC-0001", name: "Máy khoan pin" },
+    employeeName: null,
+  },
+];
