@@ -1,5 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Load relations with a single JOIN query instead of one query per relation;
+  // matters when every round trip to the database is slow.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

@@ -4,6 +4,7 @@ import { UserStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import {
+  clearSessionCache,
   createSession,
   destroySession,
   getCurrentUser,
@@ -36,11 +37,13 @@ export async function login(formData: FormData) {
     redirect("/login?error=invalid");
   }
 
-  await createSession(user.id);
-  await db.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date() },
-  });
+  await Promise.all([
+    createSession(user.id),
+    db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    }),
+  ]);
 
   redirect(user.mustChangePassword ? "/account/password" : "/");
 }
@@ -81,6 +84,7 @@ export async function changePassword(formData: FormData) {
       mustChangePassword: false,
     },
   });
+  clearSessionCache(user.id);
 
   redirect("/");
 }

@@ -31,7 +31,6 @@ export default async function DashboardPage() {
     <section className="page">
       <header className="page-header dashboard-heading">
         <div>
-          <p className="eyebrow">{t("app.name")}</p>
           <h1>{t("dashboard.title")}</h1>
           <p>{t("dashboard.subtitle")}</p>
         </div>
@@ -85,7 +84,6 @@ export default async function DashboardPage() {
       <section className="report-section">
         <div className="report-section-heading">
           <div>
-            <p className="eyebrow">{t("dashboard.reportEyebrow")}</p>
             <h2>{t("dashboard.reports")}</h2>
             <p>{t("dashboard.reportsHelp")}</p>
           </div>
@@ -124,7 +122,7 @@ export default async function DashboardPage() {
                       <span>{t(`status.${item.status}`)}</span>
                       <strong>{item.count}</strong>
                     </div>
-                    <div className="report-track">
+                    <div className={`report-track report-track-${item.status.toLowerCase()}`}>
                       <span style={{ width: `${percentage}%` }} />
                     </div>
                   </div>

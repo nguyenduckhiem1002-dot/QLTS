@@ -1,95 +1,29 @@
-import { createEmployee } from "@/lib/actions/reference";
+import { buildEmployeeLabels } from "@/components/employees-labels";
+import { EmployeesScreen } from "@/components/employees-screen";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getEmployees } from "@/lib/data";
+import { getEmployeesWithHoldings } from "@/lib/data";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
 
 export const metadata = { title: "Nhân viên" };
 
+// Loads everything once; selecting, filtering and the add/edit dialog run in the browser.
 export default async function EmployeesPage() {
-  const [{ t }, employees, currentUser] = await Promise.all([
+  const [{ t, locale }, employees, currentUser] = await Promise.all([
     getTranslations(),
-    getEmployees(),
+    getEmployeesWithHoldings(),
     getCurrentUser(),
   ]);
-  const demoMode = isDemoMode();
-  const canManage = hasPermission(currentUser?.role, "reference:write");
 
   return (
     <section className="page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">{t("nav.employees")}</p>
-          <h1>{t("employees.title")}</h1>
-          <p>{t("employees.subtitle")}</p>
-        </div>
-      </header>
-
-      <div className="split-layout">
-        <div className="table-card">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("employees.code")}</th>
-                  <th>{t("employees.name")}</th>
-                  <th>{t("employees.department")}</th>
-                  <th>{t("employees.email")}</th>
-                  <th>{t("employees.currentAssets")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((employee) => (
-                  <tr key={employee.id}>
-                    <td>
-                      <span className="mono-code">{employee.employeeCode}</span>
-                    </td>
-                    <td>
-                      <strong className="cell-primary">{employee.name}</strong>
-                    </td>
-                    <td>{employee.department ?? "—"}</td>
-                    <td className="cell-email">{employee.email ?? "—"}</td>
-                    <td>
-                      <span className="numeric-value">{employee._count.assets}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {employees.length === 0 ? (
-            <div className="empty-state">{t("common.none")}</div>
-          ) : null}
-        </div>
-
-        <form action={createEmployee} className="panel compact-form">
-          <div className="form-intro">
-            <span className="form-kicker">{t("nav.employees")}</span>
-            <h2>{t("employees.create")}</h2>
-          </div>
-          <label>
-            <span>{t("employees.code")}</span>
-            <input name="employeeCode" required disabled={demoMode || !canManage} />
-          </label>
-          <label>
-            <span>{t("employees.name")}</span>
-            <input name="name" required disabled={demoMode || !canManage} />
-          </label>
-          <label>
-            <span>{t("employees.department")}</span>
-            <input name="department" disabled={demoMode || !canManage} />
-          </label>
-          <label>
-            <span>{t("employees.email")}</span>
-            <input name="email" type="email" disabled={demoMode || !canManage} />
-          </label>
-          <button className="button button-primary" type="submit" disabled={demoMode || !canManage}>
-            {t("common.create")}
-          </button>
-        </form>
-      </div>
+      <EmployeesScreen
+        employees={employees}
+        labels={buildEmployeeLabels(t)}
+        canManage={!isDemoMode() && hasPermission(currentUser?.role, "reference:write")}
+        locale={locale}
+      />
     </section>
   );
 }

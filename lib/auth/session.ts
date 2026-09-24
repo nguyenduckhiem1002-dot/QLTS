@@ -1,6 +1,7 @@
 import { UserRole, UserStatus } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { hasPermission, type Permission } from "@/lib/auth/permissions";
 import { generateToken, hashToken } from "@/lib/auth/token";
@@ -26,6 +27,33 @@ const demoUser: CurrentUser = {
   status: UserStatus.ACTIVE,
   mustChangePassword: false,
 };
+
+/*
+ * Short-lived in-process cache of validated sessions, keyed by token hash.
+ * Every page and server action needs the current user, and with a remote
+ * database each lookup is a full round trip. Entries live at most
+ * SESSION_CACHE_MS and are dropped whenever a user's session, role, status or
+ * password changes (see clearSessionCache callers).
+ */
+const SESSION_CACHE_MS = 30_000;
+const SESSION_CACHE_MAX = 500;
+
+type CachedSession = { user: CurrentUser; expiresAt: number };
+
+const globalForSessions = globalThis as unknown as {
+  qltsSessionCache?: Map<string, CachedSession>;
+};
+const sessionCache = (globalForSessions.qltsSessionCache ??= new Map());
+
+export function clearSessionCache(userId?: string) {
+  if (!userId) {
+    sessionCache.clear();
+    return;
+  }
+  for (const [key, entry] of sessionCache) {
+    if (entry.user.id === userId) sessionCache.delete(key);
+  }
+}
 
 function sessionCookieSecure() {
   return process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase() === "true";
@@ -57,23 +85,31 @@ export async function destroySession() {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (token) {
+    const tokenHash = hashToken(token);
+    sessionCache.delete(tokenHash);
     await db.userSession.deleteMany({
-      where: { tokenHash: hashToken(token) },
+      where: { tokenHash },
     });
   }
 
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+// Memoized per request: the layout and the page both need the user.
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (isDemoMode()) return demoUser;
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
+  const tokenHash = hashToken(token);
+  const cached = sessionCache.get(tokenHash);
+  if (cached && cached.expiresAt > Date.now()) return cached.user;
+  if (cached) sessionCache.delete(tokenHash);
+
   const session = await db.userSession.findUnique({
-    where: { tokenHash: hashToken(token) },
+    where: { tokenHash },
     select: {
       id: true,
       expiresAt: true,
@@ -97,8 +133,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null;
   }
 
+  if (sessionCache.size >= SESSION_CACHE_MAX) sessionCache.clear();
+  sessionCache.set(tokenHash, {
+    user: session.user,
+    expiresAt: Math.min(Date.now() + SESSION_CACHE_MS, session.expiresAt.getTime()),
+  });
+
   return session.user;
-}
+});
 
 export async function requireUser() {
   const user = await getCurrentUser();

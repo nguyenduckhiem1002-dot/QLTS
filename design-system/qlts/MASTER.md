@@ -21,19 +21,20 @@ This is the visual source of truth for QLTS. It is intentionally optimized for a
 
 ## Type
 
-- UI: Geist Sans.
-- Codes, serials and important numeric values: Geist Mono.
+- UI: Be Vietnam Pro (designed for Vietnamese diacritics).
+- Codes, serials and important numeric values: JetBrains Mono.
 - Headings use tight tracking and sentence case.
 - Data uses tabular figures where possible.
 
 ## Color
 
-- Canvas: cool neutral gray.
-- Navigation: charcoal navy.
+- Canvas: green-tinted neutral (#F3F5F4).
+- Navigation: near-black green (#121A19).
 - Surface: white.
-- Primary accent: muted operational blue.
-- Status colors are semantic and low saturation.
-- One accent color only outside semantic status colors.
+- Primary accent: deep moss green (#1F4D43); selection tint #E6F0EC.
+- Asset tag yellow (#F4C63D) is reserved for asset codes, labels and printed tags.
+- Status colors are semantic and low saturation ("in use" stays blue).
+- One accent color only outside semantic status colors and the tag yellow.
 
 ## Surfaces
 
@@ -42,6 +43,9 @@ This is the visual source of truth for QLTS. It is intentionally optimized for a
 - Status is shown as text + dot rather than pill badges in data tables.
 
 ## Interaction
+
+- Screens whose data is small (employees, categories, locations) load it once and do
+  selection, filtering, sorting and dialogs in the browser; only saves hit the server.
 
 - Minimum interactive height: 40px desktop, 44px on touch layouts.
 - Hover/press transitions: 120-200ms.

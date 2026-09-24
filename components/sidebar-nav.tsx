@@ -56,7 +56,6 @@ export function SidebarNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch
               aria-label={labels[item.key]}
               aria-current={active ? "page" : undefined}
               className={`nav-link${active ? " nav-link-active" : ""}`}

@@ -1,4 +1,7 @@
 import { AssetStatus } from "@prisma/client";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
+import { CATEGORY_LOCATION_OPTIONS_TAG, EMPLOYEE_OPTIONS_TAG } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
 import {
   demoAssetDetails,
@@ -211,6 +214,59 @@ export async function getEmployees() {
   });
 }
 
+// Everything the employees screen needs, in one query, so selecting people,
+// filtering and opening the edit dialog never go back to the server.
+export async function getEmployeesWithHoldings() {
+  if (isDemoMode()) {
+    return demoEmployees.map((employee) => ({
+      id: employee.id,
+      employeeCode: employee.employeeCode,
+      name: employee.name,
+      email: employee.email,
+      department: employee.department,
+      historyCount: 0,
+      assets: [] as { id: string; code: string; name: string; since: Date | null }[],
+    }));
+  }
+
+  const rows = await db.employee.findMany({
+    select: {
+      id: true,
+      employeeCode: true,
+      name: true,
+      email: true,
+      department: true,
+      _count: { select: { assignments: true } },
+      assets: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          assignments: {
+            where: { returnedAt: null },
+            select: { assignedAt: true },
+            orderBy: { assignedAt: "desc" },
+            take: 1,
+          },
+        },
+        orderBy: { code: "asc" },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return rows.map(({ _count, assets, ...employee }) => ({
+    ...employee,
+    historyCount: _count.assignments,
+    assets: assets.map(({ assignments, ...asset }) => ({
+      ...asset,
+      since: assignments[0]?.assignedAt ?? null,
+    })),
+  }));
+}
+
+export type EmployeeWithHoldings = Awaited<ReturnType<typeof getEmployeesWithHoldings>>[number];
+
 export async function getUsersForAdmin() {
   if (isDemoMode()) return demoUsers;
 
@@ -237,21 +293,56 @@ export async function getAssetFormOptions() {
     };
   }
 
-  const [categories, locations] = await Promise.all([
-    db.category.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    db.location.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  return { categories, locations };
+  return loadAssetFormOptions();
 }
 
-export async function getAssetDetail(id: string) {
+// Cached across requests; invalidated by category/location actions via updateTag.
+const loadAssetFormOptions = unstable_cache(
+  async () => {
+    const [categories, locations] = await Promise.all([
+      db.category.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      db.location.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    return { categories, locations };
+  },
+  ["asset-form-options"],
+  { tags: [CATEGORY_LOCATION_OPTIONS_TAG], revalidate: 600 },
+);
+
+// Only the columns the edit form needs; the detail query also loads history and image metadata.
+export async function getAssetForEdit(id: string) {
+  if (isDemoMode()) {
+    return demoAssetDetails.find((asset) => asset.id === id) ?? null;
+  }
+
+  return db.asset.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      serialNumber: true,
+      barcode: true,
+      description: true,
+      status: true,
+      categoryId: true,
+      locationId: true,
+      custodianId: true,
+      purchaseDate: true,
+      purchaseCost: true,
+      custodian: { select: { name: true } },
+    },
+  });
+}
+
+// Memoized per request: generateMetadata and the page both load the asset.
+export const getAssetDetail = cache(async (id: string) => {
   if (isDemoMode()) {
     return demoAssetDetails.find((asset) => asset.id === id) ?? null;
   }
@@ -278,7 +369,7 @@ export async function getAssetDetail(id: string) {
       },
     },
   });
-}
+});
 
 export async function getEmployeesForAssignment() {
   if (isDemoMode()) {
@@ -289,8 +380,15 @@ export async function getEmployeesForAssignment() {
     }));
   }
 
-  return db.employee.findMany({
-    select: { id: true, name: true, department: true },
-    orderBy: { name: "asc" },
-  });
+  return loadEmployeeOptions();
 }
+
+const loadEmployeeOptions = unstable_cache(
+  () =>
+    db.employee.findMany({
+      select: { id: true, name: true, department: true },
+      orderBy: { name: "asc" },
+    }),
+  ["employee-options"],
+  { tags: [EMPLOYEE_OPTIONS_TAG], revalidate: 600 },
+);

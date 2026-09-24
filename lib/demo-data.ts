@@ -166,6 +166,10 @@ export const demoAssets = [
 
 export const demoAssetDetails = demoAssets.map((asset) => ({
   ...asset,
+  categoryId: null as string | null,
+  locationId: null as string | null,
+  purchaseDate: null as Date | null,
+  purchaseCost: null as number | null,
   image: null,
   assignments:
     asset.id === "demo-asset-1"
@@ -174,6 +178,7 @@ export const demoAssetDetails = demoAssets.map((asset) => ({
             id: "demo-assignment-1",
             assignedAt: new Date("2026-08-12T02:00:00.000Z"),
             returnedAt: null,
+            note: null as string | null,
             employee: { name: "Nguyễn Văn An" },
           },
         ]
@@ -183,6 +188,7 @@ export const demoAssetDetails = demoAssets.map((asset) => ({
               id: "demo-assignment-2",
               assignedAt: new Date("2026-07-03T02:30:00.000Z"),
               returnedAt: null,
+              note: null as string | null,
               employee: { name: "Trần Minh Bình" },
             },
           ]

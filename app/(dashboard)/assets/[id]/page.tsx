@@ -1,12 +1,10 @@
-import {
-  ArrowLeft,
-  ImagePlus,
-  RotateCcw,
-  ScanBarcode,
-  Trash2,
-} from "lucide-react";
+import { ChevronLeft, House, Pencil, Printer, RotateCcw } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AssetPhoto } from "@/components/asset-photo";
+import { SubmitButton } from "@/components/submit-button";
+import { Notice } from "@/components/ui";
 import {
   assignAsset,
   removeAssetImage,
@@ -16,8 +14,32 @@ import {
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAssetDetail, getEmployeesForAssignment } from "@/lib/data";
-import { getTranslations } from "@/lib/i18n";
+import { getInitials } from "@/lib/format";
+import { getTranslations, type TranslationKey } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
+
+const successMessages: Record<string, TranslationKey> = {
+  image: "assets.imageUpdated",
+  image_removed: "assets.imageRemoved",
+  updated: "assets.updated",
+  assigned: "assets.assigned",
+  returned: "assets.returned",
+};
+
+const errorMessages: Record<string, TranslationKey> = {
+  image_type: "assets.imageTypeError",
+  image_size: "assets.imageSizeError",
+  image_required: "assets.imageRequired",
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const asset = await getAssetDetail((await params).id);
+  return { title: asset ? `${asset.code} ${asset.name}` : "Tài sản" };
+}
 
 export default async function AssetDetailPage({
   params,
@@ -28,277 +50,297 @@ export default async function AssetDetailPage({
 }) {
   const { id } = await params;
 
-  const [{ t, locale }, asset, employees, currentUser, pageParams] =
-    await Promise.all([
-      getTranslations(),
-      getAssetDetail(id),
-      getEmployeesForAssignment(),
-      getCurrentUser(),
-      searchParams,
-    ]);
+  const [{ t, locale }, asset, employees, currentUser, pageParams] = await Promise.all([
+    getTranslations(),
+    getAssetDetail(id),
+    getEmployeesForAssignment(),
+    getCurrentUser(),
+    searchParams,
+  ]);
 
   if (!asset) notFound();
 
   const demoMode = isDemoMode();
   const canManage = hasPermission(currentUser?.role, "assets:write");
+  const editable = canManage && !demoMode;
   const dateLocale = locale === "vi" ? "vi-VN" : "en-US";
-  const formatDate = (date: Date | null) =>
-    date
-      ? new Intl.DateTimeFormat(dateLocale, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(date)
-      : "—";
+  const shortDate = new Intl.DateTimeFormat(dateLocale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const dateTime = new Intl.DateTimeFormat(dateLocale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const number = new Intl.NumberFormat(dateLocale, { maximumFractionDigits: 0 });
 
-  const mediaError =
-    pageParams.error === "image_type"
-      ? t("assets.imageTypeError")
-      : pageParams.error === "image_size"
-        ? t("assets.imageSizeError")
-        : pageParams.error === "image_required"
-          ? t("assets.imageRequired")
-          : null;
-
-  const mediaSuccess =
-    pageParams.success === "image"
-      ? t("assets.imageUpdated")
-      : pageParams.success === "image_removed"
-        ? t("assets.imageRemoved")
-        : null;
-
+  const success = pageParams.success ? successMessages[pageParams.success] : undefined;
+  const error = pageParams.error ? errorMessages[pageParams.error] : undefined;
+  const none = <span className="ad-empty-value">{t("common.notAvailable")}</span>;
+  const barcodeValue = asset.barcode ?? asset.code;
+  const barcodeUrl = `/api/assets/${asset.id}/barcode`;
   const imageUrl = asset.image
     ? `/api/assets/${asset.id}/image?v=${asset.image.updatedAt.getTime()}`
     : null;
 
+  const activeAssignment = asset.custodianId
+    ? asset.assignments.find((assignment) => !assignment.returnedAt)
+    : undefined;
+  const subtitle = [
+    asset.category?.name,
+    asset.purchaseDate
+      ? t("assets.purchasedOn").replace("{date}", shortDate.format(asset.purchaseDate))
+      : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
-    <section className="page">
-      <header className="page-header">
-        <Link className="back-link" href="/assets">
-          <ArrowLeft size={15} aria-hidden="true" />
-          {t("common.back")}
-        </Link>
-        <div className="detail-title-row">
-          <div>
-            <p className="eyebrow mono-eyebrow">{asset.code}</p>
-            <h1>{asset.name}</h1>
-            <p>{t("assets.detailTitle")}</p>
-          </div>
-          <span className={`status-text status-${asset.status.toLowerCase()}`}>
-            <i aria-hidden="true" />
-            {t(`status.${asset.status}`)}
-          </span>
-        </div>
-      </header>
+    <section className="page asset-detail">
+      <Link className="ad-back" href="/assets">
+        <ChevronLeft size={16} aria-hidden="true" />
+        {t("nav.assets")}
+      </Link>
 
-      {mediaError ? <div className="form-error">{mediaError}</div> : null}
-      {mediaSuccess ? <div className="form-success">{mediaSuccess}</div> : null}
+      {success ? <Notice tone="success">{t(success)}</Notice> : null}
+      {error ? <Notice tone="error">{t(error)}</Notice> : null}
 
-      <section className="asset-media-grid" aria-label={t("assets.media")}>
-        <article className="data-surface asset-image-panel">
-          <div className="surface-heading">
-            <div>
-              <h2>{t("assets.image")}</h2>
-              <span>{asset.image?.fileName ?? t("assets.noImage")}</span>
+      <div className="ad-layout">
+        <aside className="ad-side">
+          <AssetPhoto
+            assetId={asset.id}
+            imageUrl={imageUrl}
+            fill={Boolean(asset.image?.fileName.startsWith("minh-hoa-"))}
+            editable={editable}
+            uploadAction={replaceAssetImage}
+            removeAction={removeAssetImage}
+            labels={{
+              alt: asset.name,
+              empty: t("assets.noImage"),
+              change: t("assets.clickToChangePhoto"),
+              add: t("assets.clickToAddPhoto"),
+              remove: t("assets.removeImage"),
+              removeConfirm: t("assets.removeImageConfirm"),
+              uploading: t("assets.uploading"),
+              help: t("assets.imageHelp"),
+              typeError: t("assets.imageTypeError"),
+              sizeError: t("assets.imageSizeError"),
+            }}
+          />
+
+          <article className="ad-tag" aria-label={t("assets.barcode")}>
+            <div className="ad-tag-head">
+              <span>{t("assets.tagOwner")}</span>
+              <i className="ad-tag-hole" aria-hidden="true" />
             </div>
-            <ImagePlus size={18} aria-hidden="true" />
-          </div>
+            <div className="ad-tag-barcode">
+              <img src={barcodeUrl} alt={`${t("assets.barcode")} ${barcodeValue}`} />
+            </div>
+            <strong className="ad-tag-code">{barcodeValue}</strong>
+            <span className="ad-tag-name">{asset.name}</span>
+            <div className="ad-tag-foot">
+              <span>{t("assets.tagType")}</span>
+              <a className="ad-tag-print" href={barcodeUrl} target="_blank" rel="noreferrer">
+                <Printer size={15} aria-hidden="true" />
+                {t("assets.printLabel")}
+              </a>
+            </div>
+          </article>
+        </aside>
 
-          <div className="asset-image-frame">
-            {imageUrl ? (
-              <img src={imageUrl} alt={`${asset.name} - ${t("assets.image")}`} />
-            ) : (
-              <div className="asset-image-empty">
-                <ImagePlus size={30} aria-hidden="true" />
-                <span>{t("assets.noImage")}</span>
+        <div className="ad-main">
+          <header className="ad-header">
+            <div>
+              <span className={`status-pill status-pill-${asset.status.toLowerCase()}`}>
+                <i aria-hidden="true" />
+                {t(`status.${asset.status}`)}
+              </span>
+              <h1>{asset.name}</h1>
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+            {editable ? (
+              <Link className="button button-primary" href={`/assets/${asset.id}/edit`}>
+                <Pencil size={15} aria-hidden="true" />
+                {t("common.edit")}
+              </Link>
+            ) : null}
+          </header>
+
+          <section className="ad-handover">
+            <div className="ad-handover-state">
+              {asset.custodian ? (
+                <span className="avatar ad-handover-avatar" aria-hidden="true">
+                  {getInitials(asset.custodian.name)}
+                </span>
+              ) : (
+                <span className="ad-handover-icon" aria-hidden="true">
+                  <House size={19} strokeWidth={1.8} />
+                </span>
+              )}
+              <div className="ad-handover-copy">
+                {asset.custodian ? (
+                  <>
+                    <strong>{t("assets.heldBy").replace("{name}", asset.custodian.name)}</strong>
+                    <span>
+                      {[
+                        activeAssignment
+                          ? t("assets.heldSince").replace(
+                              "{date}",
+                              shortDate.format(activeAssignment.assignedAt),
+                            )
+                          : null,
+                        asset.custodian.department,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                      {editable ? `. ${t("assets.heldHelp")}` : null}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <strong>
+                      {asset.location
+                        ? t("assets.atLocation").replace("{location}", asset.location.name)
+                        : t("assets.noLocation")}
+                    </strong>
+                    <span>
+                      {editable ? t("assets.notAssignedHelp") : t("assets.notAssignedReadonly")}
+                    </span>
+                  </>
+                )}
               </div>
-            )}
-          </div>
-
-          {canManage && !demoMode ? (
-            <div className="asset-image-actions">
-              <form action={replaceAssetImage} className="asset-image-upload">
-                <input type="hidden" name="assetId" value={asset.id} />
-                <label>
-                  <span>{asset.image ? t("assets.replaceImage") : t("assets.addImage")}</span>
-                  <input
-                    name="image"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    required
-                  />
-                </label>
-                <button className="button button-secondary" type="submit">
-                  {asset.image ? t("assets.replaceImage") : t("assets.addImage")}
-                </button>
-              </form>
-
-              {asset.image ? (
-                <form action={removeAssetImage}>
+              {editable && asset.custodian ? (
+                <form action={returnAsset}>
                   <input type="hidden" name="assetId" value={asset.id} />
-                  <button className="button button-danger-soft" type="submit">
-                    <Trash2 size={15} aria-hidden="true" />
-                    {t("assets.removeImage")}
-                  </button>
+                  <SubmitButton className="button button-secondary" pendingLabel={t("common.saving")}>
+                    <RotateCcw size={15} aria-hidden="true" />
+                    {t("assets.returnShort")}
+                  </SubmitButton>
                 </form>
               ) : null}
             </div>
-          ) : null}
-        </article>
 
-        <article className="data-surface barcode-panel">
-          <div className="surface-heading">
-            <div>
-              <h2>{t("assets.barcode")}</h2>
-              <span>{t("assets.barcodeType")}</span>
-            </div>
-            <ScanBarcode size={18} aria-hidden="true" />
-          </div>
-
-          <div className="barcode-frame">
-            <img
-              src={`/api/assets/${asset.id}/barcode`}
-              alt={`${t("assets.barcode")} ${asset.barcode ?? asset.code}`}
-            />
-          </div>
-
-          <div className="barcode-meta">
-            <div>
-              <span>{t("assets.barcodeValue")}</span>
-              <strong>{asset.barcode ?? asset.code}</strong>
-            </div>
-            <a
-              className="surface-action"
-              href={`/api/assets/${asset.id}/barcode`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("assets.openBarcode")}
-            </a>
-          </div>
-        </article>
-      </section>
-
-      <div className="detail-grid detail-grid-spaced">
-        <article className="data-surface detail-panel">
-          <dl className="detail-list">
-            <div>
-              <dt>{t("assets.code")}</dt>
-              <dd className="mono-value">{asset.code}</dd>
-            </div>
-            <div>
-              <dt>{t("assets.barcode")}</dt>
-              <dd className="mono-value">{asset.barcode ?? asset.code}</dd>
-            </div>
-            <div>
-              <dt>{t("assets.serial")}</dt>
-              <dd className="mono-value">{asset.serialNumber ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>{t("assets.category")}</dt>
-              <dd>{asset.category?.name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>{t("assets.location")}</dt>
-              <dd>{asset.location?.name ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>{t("assets.custodian")}</dt>
-              <dd>{asset.custodian?.name ?? "—"}</dd>
-            </div>
-            <div className="detail-span">
-              <dt>{t("assets.description")}</dt>
-              <dd>{asset.description ?? "—"}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="panel action-panel">
-          <div className="form-intro">
-            <span className="form-kicker">{t("assets.status")}</span>
-            <h2>{t("assets.assignment")}</h2>
-            <p>{t("assets.assignmentHelp")}</p>
-          </div>
-
-          <form action={assignAsset} className="stack-form">
-            <input type="hidden" name="assetId" value={asset.id} />
-            <label>
-              <span>{t("assets.employee")}</span>
-              <select
-                name="employeeId"
-                required
-                defaultValue={asset.custodianId ?? ""}
-                disabled={demoMode || !canManage}
-              >
-                <option value="" disabled>
-                  —
-                </option>
-                {employees.map((employee) => (
-                  <option value={employee.id} key={employee.id}>
-                    {employee.name}
-                    {employee.department ? ` · ${employee.department}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>{t("assets.note")}</span>
-              <input name="note" disabled={demoMode || !canManage} />
-            </label>
-            <button
-              className="button button-primary"
-              type="submit"
-              disabled={demoMode || !canManage}
-            >
-              {t("assets.assign")}
-            </button>
-          </form>
-
-          {asset.custodianId ? (
-            <form action={returnAsset} className="return-form">
-              <input type="hidden" name="assetId" value={asset.id} />
-              <p>{t("assets.returnHelp")}</p>
-              <button
-                className="button button-secondary"
-                type="submit"
-                disabled={demoMode || !canManage}
-              >
-                <RotateCcw size={15} aria-hidden="true" />
-                {t("assets.return")}
-              </button>
-            </form>
-          ) : null}
-        </article>
-      </div>
-
-      <article className="data-surface history-panel">
-        <div className="surface-heading">
-          <div>
-            <h2>{t("assets.history")}</h2>
-            <span>{asset.assignments.length}</span>
-          </div>
-        </div>
-
-        <div className="history-list">
-          {asset.assignments.length ? (
-            asset.assignments.map((assignment) => (
-              <div className="history-row" key={assignment.id}>
-                <div>
-                  <strong>{assignment.employee.name}</strong>
-                  <span>
-                    {t("assets.assignedAt")}: {formatDate(assignment.assignedAt)}
+            {editable ? (
+              <form action={assignAsset} className="ad-handover-form">
+                <input type="hidden" name="assetId" value={asset.id} />
+                <label>
+                  <span className="field-label">
+                    {asset.custodian ? t("assets.transferTo") : t("assets.assignTo")}
                   </span>
-                </div>
-                <div className="history-return">
-                  <span>{t("assets.returnedAt")}</span>
-                  <strong>{formatDate(assignment.returnedAt)}</strong>
-                </div>
+                  <select name="employeeId" required defaultValue="">
+                    <option value="" disabled>
+                      {t("assets.chooseEmployee")}
+                    </option>
+                    {employees
+                      .filter((employee) => employee.id !== asset.custodianId)
+                      .map((employee) => (
+                        <option value={employee.id} key={employee.id}>
+                          {employee.name}
+                          {employee.department ? ` (${employee.department})` : ""}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="field-label">
+                    {t("assets.note")}
+                    <em className="ad-label-optional">({t("common.optional").toLowerCase()})</em>
+                  </span>
+                  <input name="note" autoComplete="off" placeholder={t("assets.notePlaceholder")} />
+                </label>
+                <SubmitButton className="button button-primary ad-handover-submit" pendingLabel={t("common.saving")}>
+                  {asset.custodian ? t("assets.transfer") : t("assets.handover")}
+                </SubmitButton>
+              </form>
+            ) : null}
+          </section>
+
+          <section className="ad-section">
+            <h2>{t("assets.details")}</h2>
+            <dl className="ad-facts">
+              <div>
+                <dt>{t("assets.category")}</dt>
+                <dd>{asset.category?.name ?? none}</dd>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">{t("common.none")}</div>
-          )}
+              <div>
+                <dt>{t("assets.location")}</dt>
+                <dd>{asset.location?.name ?? none}</dd>
+              </div>
+              <div>
+                <dt>{t("assets.serial")}</dt>
+                <dd className="ad-mono">{asset.serialNumber ?? none}</dd>
+              </div>
+              <div>
+                <dt>{t("assets.purchaseDate")}</dt>
+                <dd>{asset.purchaseDate ? shortDate.format(asset.purchaseDate) : none}</dd>
+              </div>
+              <div>
+                <dt>{t("assets.purchaseCostShort")}</dt>
+                <dd className="ad-number">
+                  {asset.purchaseCost ? `${number.format(Number(asset.purchaseCost))} đ` : none}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("assets.code")}</dt>
+                <dd className="ad-mono">{asset.code}</dd>
+              </div>
+              <div className="ad-facts-span">
+                <dt>{t("assets.description")}</dt>
+                <dd>
+                  {asset.description ??
+                    (editable ? (
+                      <Link className="ad-inline-link" href={`/assets/${asset.id}/edit`}>
+                        {t("assets.addDescription")}
+                      </Link>
+                    ) : (
+                      none
+                    ))}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="ad-section">
+            <h2>
+              {t("assets.history")}
+              <span>{t("assets.historyCount").replace("{n}", String(asset.assignments.length))}</span>
+            </h2>
+            {asset.assignments.length ? (
+              <ol className="ad-history">
+                {asset.assignments.map((assignment) => (
+                  <li key={assignment.id} className={assignment.returnedAt ? undefined : "is-active"}>
+                    <span className="avatar avatar-sm" aria-hidden="true">
+                      {getInitials(assignment.employee.name)}
+                    </span>
+                    <div className="ad-history-main">
+                      <strong>{assignment.employee.name}</strong>
+                      {assignment.note ? <span>{assignment.note}</span> : null}
+                    </div>
+                    <div className="ad-history-dates">
+                      <span>{dateTime.format(assignment.assignedAt)}</span>
+                      {assignment.returnedAt ? (
+                        <span>
+                          {t("assets.returnedAt")}: {dateTime.format(assignment.returnedAt)}
+                        </span>
+                      ) : (
+                        <span className="ad-history-badge">{t("assets.stillHolding")}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="ad-history-empty">
+                <strong>{t("assets.historyEmptyTitle")}</strong> {t("assets.historyEmptyHelp")}
+              </p>
+            )}
+          </section>
         </div>
-      </article>
+      </div>
     </section>
   );
 }

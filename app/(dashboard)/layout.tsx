@@ -4,6 +4,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { logout } from "@/lib/actions/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { requireUser } from "@/lib/auth/session";
+import { getInitials } from "@/lib/format";
 import { getTranslations } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
 
@@ -56,6 +57,9 @@ export default async function DashboardLayout({
         />
 
         <div className="sidebar-account">
+          <span className="sidebar-avatar" aria-hidden="true">
+            {getInitials(user.name)}
+          </span>
           <div className="sidebar-account-copy">
             <strong>{user.name}</strong>
             <span>{t(`role.${user.role}`)}</span>
@@ -74,13 +78,14 @@ export default async function DashboardLayout({
           ) : null}
         </div>
 
-        <div className="sidebar-footer">
-          <span className="status-dot" />
-          <div>
-            <strong>{demoMode ? t("demo.badge") : t("environment.selfHosted")}</strong>
-            <span>{demoMode ? t("demo.short") : t("environment.stack")}</span>
+        {demoMode ? (
+          <div className="sidebar-footer">
+            <div>
+              <strong>{t("demo.badge")}</strong>
+              <span>{t("demo.short")}</span>
+            </div>
           </div>
-        </div>
+        ) : null}
       </aside>
 
       <main id="main-content" className="main-content">

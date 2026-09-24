@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -111,31 +111,31 @@ export function AssetTable({
                 <th>{labels.location}</th>
                 <th>{labels.custodian}</th>
                 <th>{labels.status}</th>
+                <th aria-hidden="true" className="row-chevron-cell" />
               </tr>
             </thead>
             <tbody>
               {filtered.map((asset) => (
-                <tr key={asset.id}>
+                <tr key={asset.id} className="row-link">
                   <td>
-                    <Link className="asset-link" href={`/assets/${asset.id}`}>
-                      {asset.code}
-                    </Link>
-                    {asset.barcode ? (
+                    <span className="asset-link">{asset.code}</span>
+                    {asset.barcode && asset.barcode !== asset.code ? (
                       <small className="cell-subtitle">
                         {labels.barcode}: {asset.barcode}
                       </small>
                     ) : null}
                   </td>
                   <td>
-                    <Link className="cell-title-link" href={`/assets/${asset.id}`}>
+                    {/* The link's ::after stretches over the whole row (see .row-link). */}
+                    <Link className="cell-title-link row-link-target" href={`/assets/${asset.id}`}>
                       {asset.name}
                     </Link>
                     {asset.serialNumber ? (
                       <small className="cell-subtitle">{asset.serialNumber}</small>
                     ) : null}
                   </td>
-                  <td>{asset.category?.name ?? "—"}</td>
-                  <td>{asset.location?.name ?? "—"}</td>
+                  <td>{asset.category?.name ?? <span className="cell-muted">-</span>}</td>
+                  <td>{asset.location?.name ?? <span className="cell-muted">-</span>}</td>
                   <td>
                     {asset.custodian ? (
                       <>
@@ -147,7 +147,7 @@ export function AssetTable({
                         ) : null}
                       </>
                     ) : (
-                      <span className="cell-muted">—</span>
+                      <span className="cell-muted">-</span>
                     )}
                   </td>
                   <td>
@@ -155,6 +155,9 @@ export function AssetTable({
                       <i aria-hidden="true" />
                       {statusLabels[asset.status]}
                     </span>
+                  </td>
+                  <td className="row-chevron-cell" aria-hidden="true">
+                    <ChevronRight size={16} />
                   </td>
                 </tr>
               ))}

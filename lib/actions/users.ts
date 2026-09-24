@@ -3,7 +3,7 @@
 import { UserRole, UserStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/session";
+import { clearSessionCache, requireAdmin } from "@/lib/auth/session";
 import { generateToken, hashToken } from "@/lib/auth/token";
 import { hashPassword, validatePassword } from "@/lib/auth/password";
 import {
@@ -196,6 +196,7 @@ export async function updateUserRole(formData: FormData) {
     where: { id: userId },
     data: { role },
   });
+  clearSessionCache(userId);
 
   redirect("/users?success=role");
 }
@@ -229,6 +230,7 @@ export async function toggleUserStatus(formData: FormData) {
       ? [db.userSession.deleteMany({ where: { userId } })]
       : []),
   ]);
+  clearSessionCache(userId);
 
   redirect("/users?success=status");
 }

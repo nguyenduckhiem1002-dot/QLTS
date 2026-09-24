@@ -20,7 +20,6 @@ export default async function AssetsPage() {
     <section className="page">
       <header className="page-header page-header-row">
         <div>
-          <p className="eyebrow">{t("nav.assets")}</p>
           <h1>{t("assets.title")}</h1>
           <p>{t("assets.subtitle")}</p>
         </div>
