@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth-shell";
+import { Notice } from "@/components/ui";
 import { changePassword } from "@/lib/actions/auth";
 import { requireUser } from "@/lib/auth/session";
 import { getTranslations } from "@/lib/i18n";
@@ -11,11 +13,7 @@ export default async function ChangePasswordPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const [user, { t }, params] = await Promise.all([
-    requireUser(),
-    getTranslations(),
-    searchParams,
-  ]);
+  const [user, { t }, params] = await Promise.all([requireUser(), getTranslations(), searchParams]);
 
   if (isDemoMode()) redirect("/");
 
@@ -29,40 +27,32 @@ export default async function ChangePasswordPage({
           : null;
 
   return (
-    <main id="main-content" className="auth-page">
-      <section className="auth-card">
-        <div className="auth-brand">
-          <img src="/casla-logo-compact.svg" alt="Casla" />
-          <span>{user.email}</span>
-        </div>
-        <div className="auth-heading">
-          <div>
-            <h1>{t("auth.changePasswordTitle")}</h1>
-            <p>{t("auth.changePasswordSubtitle")}</p>
-          </div>
-        </div>
+    <AuthShell title={t("auth.changePasswordTitle")} subtitle={t("auth.changePasswordSubtitle")}>
+      <div className="auth-identity">
+        <strong>{user.name}</strong>
+        <span>{user.email}</span>
+      </div>
 
-        {errorMessage ? <div className="form-error">{errorMessage}</div> : null}
+      {errorMessage ? <Notice tone="error">{errorMessage}</Notice> : null}
 
-        <form action={changePassword} className="stack-form auth-form">
-          <label>
-            <span>{t("auth.currentPassword")}</span>
-            <input name="currentPassword" type="password" autoComplete="current-password" required />
-          </label>
-          <label>
-            <span>{t("auth.newPassword")}</span>
-            <input name="newPassword" type="password" autoComplete="new-password" required />
-          </label>
-          <label>
-            <span>{t("auth.confirmPassword")}</span>
-            <input name="confirmPassword" type="password" autoComplete="new-password" required />
-          </label>
-          <small className="form-hint">{t("auth.passwordPolicy")}</small>
-          <button className="button button-primary auth-submit" type="submit">
-            {t("common.save")}
-          </button>
-        </form>
-      </section>
-    </main>
+      <form action={changePassword} className="auth-form">
+        <label className="field">
+          <span className="field-label">{t("auth.currentPassword")}</span>
+          <input name="currentPassword" type="password" autoComplete="current-password" required />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("auth.newPassword")}</span>
+          <input name="newPassword" type="password" autoComplete="new-password" required />
+        </label>
+        <label className="field">
+          <span className="field-label">{t("auth.confirmPassword")}</span>
+          <input name="confirmPassword" type="password" autoComplete="new-password" required />
+        </label>
+        <small className="field-hint">{t("auth.passwordPolicy")}</small>
+        <button className="btn btn-primary" type="submit">
+          {t("common.save")}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

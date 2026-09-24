@@ -14,7 +14,7 @@ export function ConfirmSubmit({
   return (
     <button
       type="submit"
-      className="button button-danger-soft"
+      className="btn btn-danger btn-sm"
       disabled={disabled}
       onClick={(event) => {
         if (!window.confirm(message)) event.preventDefault();

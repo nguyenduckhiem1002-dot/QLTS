@@ -8,139 +8,137 @@ import {
   demoAssets,
   demoCategories,
   demoEmployees,
+  demoActivity,
   demoLocations,
   demoUsers,
 } from "@/lib/demo-data";
 import { isDemoMode } from "@/lib/runtime";
 
-function countDemoStatus(status: AssetStatus) {
-  return demoAssets.filter((asset) => asset.status === status).length;
-}
+const STATUS_ORDER = [
+  AssetStatus.IN_USE,
+  AssetStatus.AVAILABLE,
+  AssetStatus.MAINTENANCE,
+  AssetStatus.LOST,
+  AssetStatus.DISPOSED,
+] as const;
 
-export async function getDashboardData() {
-  if (isDemoMode()) {
-    const total = demoAssets.length;
-    const inUse = countDemoStatus(AssetStatus.IN_USE);
-    const available = countDemoStatus(AssetStatus.AVAILABLE);
-    const maintenance = countDemoStatus(AssetStatus.MAINTENANCE);
-    const lost = countDemoStatus(AssetStatus.LOST);
-    const disposed = countDemoStatus(AssetStatus.DISPOSED);
+export type ActivityItem = {
+  id: string;
+  action: string;
+  createdAt: Date;
+  actor: string | null;
+  asset: { id: string; code: string; name: string } | null;
+  employeeName: string | null;
+};
 
-    return {
-      total,
-      inUse,
-      available,
-      maintenance,
-      lost,
-      disposed,
-      categories: demoCategories.length,
-      locations: demoLocations.length,
-      utilization: total ? Math.round((inUse / total) * 100) : 0,
-      statusReport: [
-        { status: AssetStatus.IN_USE, count: inUse },
-        { status: AssetStatus.AVAILABLE, count: available },
-        { status: AssetStatus.MAINTENANCE, count: maintenance },
-        { status: AssetStatus.LOST, count: lost },
-        { status: AssetStatus.DISPOSED, count: disposed },
-      ],
-      categoryReport: demoCategories
-        .map((category) => ({
-          name: category.name,
-          count: category._count.assets,
-        }))
-        .sort((a, b) => b.count - a.count),
-      locationReport: demoLocations
-        .map((location) => ({
-          name: location.name,
-          count: location._count.assets,
-        }))
-        .sort((a, b) => b.count - a.count),
-      recent: demoAssets.slice(0, 7).map(({ id, code, name, status, updatedAt }) => ({
-        id,
-        code,
-        name,
-        status,
-        updatedAt,
-      })),
-    };
-  }
-
-  const [total, statusGroups, categoryRows, locationRows, recent] =
-    await Promise.all([
-      db.asset.count(),
-      db.asset.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-      db.category.findMany({
-        select: {
-          name: true,
-          _count: { select: { assets: true } },
-        },
-      }),
-      db.location.findMany({
-        select: {
-          name: true,
-          _count: { select: { assets: true } },
-        },
-      }),
-      db.asset.findMany({
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          status: true,
-          updatedAt: true,
-        },
-        orderBy: { updatedAt: "desc" },
-        take: 7,
-      }),
-    ]);
-
-  const statusMap = new Map(
-    statusGroups.map((row) => [row.status, row._count._all]),
-  );
-  const statusCount = (status: AssetStatus) => statusMap.get(status) ?? 0;
-
-  const inUse = statusCount(AssetStatus.IN_USE);
-  const available = statusCount(AssetStatus.AVAILABLE);
-  const maintenance = statusCount(AssetStatus.MAINTENANCE);
-  const lost = statusCount(AssetStatus.LOST);
-  const disposed = statusCount(AssetStatus.DISPOSED);
+function summarize(
+  total: number,
+  counts: Map<AssetStatus, number>,
+  extra: {
+    totalValue: number;
+    noImage: number;
+    noLocation: number;
+    categoryReport: { name: string; count: number }[];
+    locationReport: { name: string; count: number }[];
+    activity: ActivityItem[];
+  },
+) {
+  const count = (status: AssetStatus) => counts.get(status) ?? 0;
+  const inUse = count(AssetStatus.IN_USE);
+  const byCount = (a: { count: number }, b: { count: number }) => b.count - a.count;
 
   return {
     total,
     inUse,
-    available,
-    maintenance,
-    lost,
-    disposed,
-    categories: categoryRows.length,
-    locations: locationRows.length,
+    available: count(AssetStatus.AVAILABLE),
+    maintenance: count(AssetStatus.MAINTENANCE),
+    lost: count(AssetStatus.LOST),
     utilization: total ? Math.round((inUse / total) * 100) : 0,
-    statusReport: [
-      { status: AssetStatus.IN_USE, count: inUse },
-      { status: AssetStatus.AVAILABLE, count: available },
-      { status: AssetStatus.MAINTENANCE, count: maintenance },
-      { status: AssetStatus.LOST, count: lost },
-      { status: AssetStatus.DISPOSED, count: disposed },
-    ],
-    categoryReport: categoryRows
-      .map((category) => ({
-        name: category.name,
-        count: category._count.assets,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6),
-    locationReport: locationRows
-      .map((location) => ({
-        name: location.name,
-        count: location._count.assets,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6),
-    recent,
+    statusReport: STATUS_ORDER.map((status) => ({ status, count: count(status) })),
+    categoryCount: extra.categoryReport.length,
+    locationCount: extra.locationReport.length,
+    categoryReport: [...extra.categoryReport].sort(byCount).slice(0, 8),
+    locationReport: [...extra.locationReport].sort(byCount).slice(0, 8),
+    totalValue: extra.totalValue,
+    noImage: extra.noImage,
+    noLocation: extra.noLocation,
+    activity: extra.activity,
   };
+}
+
+export async function getDashboardData() {
+  if (isDemoMode()) {
+    const counts = new Map<AssetStatus, number>();
+    for (const asset of demoAssets) counts.set(asset.status, (counts.get(asset.status) ?? 0) + 1);
+    const live = demoAssets.filter((asset) => (asset.status as AssetStatus) !== AssetStatus.DISPOSED);
+
+    return summarize(demoAssets.length, counts, {
+      totalValue: 0,
+      noImage: live.length,
+      noLocation: live.filter((asset) => !asset.location).length,
+      categoryReport: demoCategories.map((c) => ({ name: c.name, count: c._count.assets })),
+      locationReport: demoLocations.map((l) => ({ name: l.name, count: l._count.assets })),
+      activity: demoActivity,
+    });
+  }
+
+  const notDisposed = { status: { not: AssetStatus.DISPOSED } };
+  const [total, statusGroups, value, noImage, noLocation, categoryRows, locationRows, logs] =
+    await Promise.all([
+      db.asset.count(),
+      db.asset.groupBy({ by: ["status"], _count: { _all: true } }),
+      db.asset.aggregate({ _sum: { purchaseCost: true } }),
+      db.asset.count({ where: { ...notDisposed, image: null } }),
+      db.asset.count({ where: { ...notDisposed, locationId: null } }),
+      db.category.findMany({ select: { name: true, _count: { select: { assets: true } } } }),
+      db.location.findMany({ select: { name: true, _count: { select: { assets: true } } } }),
+      db.auditLog.findMany({
+        where: { entityType: "Asset" },
+        select: { id: true, action: true, entityId: true, actor: true, payload: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+    ]);
+
+  // Resolve the asset and (for handovers) employee behind each log row in two queries.
+  const employeeIdOf = (payload: unknown) =>
+    payload && typeof payload === "object" && "employeeId" in payload
+      ? String((payload as { employeeId: unknown }).employeeId)
+      : null;
+  const actors = [...new Set(logs.map((log) => log.actor).filter((actor): actor is string => Boolean(actor)))];
+  const [assets, employees, users] = await Promise.all([
+    db.asset.findMany({
+      where: { id: { in: [...new Set(logs.map((log) => log.entityId))] } },
+      select: { id: true, code: true, name: true },
+    }),
+    db.employee.findMany({
+      where: { id: { in: logs.map((log) => employeeIdOf(log.payload)).filter((id): id is string => Boolean(id)) } },
+      select: { id: true, name: true },
+    }),
+    db.user.findMany({ where: { email: { in: actors } }, select: { email: true, name: true } }),
+  ]);
+  const actorName = new Map(users.map((user) => [user.email, user.name]));
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const employeeById = new Map(employees.map((employee) => [employee.id, employee.name]));
+
+  return summarize(total, new Map(statusGroups.map((row) => [row.status, row._count._all])), {
+    totalValue: Number(value._sum.purchaseCost ?? 0),
+    noImage,
+    noLocation,
+    categoryReport: categoryRows.map((c) => ({ name: c.name, count: c._count.assets })),
+    locationReport: locationRows.map((l) => ({ name: l.name, count: l._count.assets })),
+    activity: logs.map((log) => {
+      const employeeId = employeeIdOf(log.payload);
+      return {
+        id: log.id,
+        action: log.action,
+        createdAt: log.createdAt,
+        actor: log.actor ? actorName.get(log.actor) ?? log.actor : null,
+        asset: assetById.get(log.entityId) ?? null,
+        employeeName: employeeId ? employeeById.get(employeeId) ?? null : null,
+      };
+    }),
+  });
 }
 
 export async function getAssets() {
@@ -166,6 +164,7 @@ export async function getAssets() {
         category,
         location,
         custodian,
+        image: null,
       }),
     );
   }
@@ -181,6 +180,7 @@ export async function getAssets() {
       category: { select: { name: true } },
       location: { select: { name: true } },
       custodian: { select: { name: true, department: true } },
+      image: { select: { id: true } },
     },
     orderBy: [{ updatedAt: "desc" }, { code: "asc" }],
     take: 500,
@@ -224,8 +224,15 @@ export async function getEmployeesWithHoldings() {
       name: employee.name,
       email: employee.email,
       department: employee.department,
-      historyCount: 0,
-      assets: [] as { id: string; code: string; name: string; since: Date | null }[],
+      historyCount: demoAssetDetails.filter((asset) => asset.custodianId === employee.id).length,
+      assets: demoAssetDetails
+        .filter((asset) => asset.custodianId === employee.id)
+        .map((asset) => ({
+          id: asset.id,
+          code: asset.code,
+          name: asset.name,
+          since: asset.assignments.find((assignment) => !assignment.returnedAt)?.assignedAt ?? null,
+        })),
     }));
   }
 
@@ -392,3 +399,20 @@ const loadEmployeeOptions = unstable_cache(
   ["employee-options"],
   { tags: [EMPLOYEE_OPTIONS_TAG], revalidate: 600 },
 );
+
+export async function getAssetsForLabels(ids: string[]) {
+  const unique = [...new Set(ids)].slice(0, 200);
+  if (!unique.length) return [];
+
+  if (isDemoMode()) {
+    return demoAssets
+      .filter((asset) => unique.includes(asset.id))
+      .map(({ id, code, name, barcode, location }) => ({ id, code, name, barcode, location }));
+  }
+
+  return db.asset.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, code: true, name: true, barcode: true, location: { select: { name: true } } },
+    orderBy: { code: "asc" },
+  });
+}

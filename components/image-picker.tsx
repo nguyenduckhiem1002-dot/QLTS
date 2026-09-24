@@ -133,7 +133,10 @@ export function ImagePicker({
             <span className="image-picker-icon">
               <ImagePlus size={20} strokeWidth={1.8} aria-hidden="true" />
             </span>
-            <span className="image-picker-cta">{labels.cta}</span>
+            <span className="image-picker-cta">
+              {labels.cta}
+              <small>{labels.help}</small>
+            </span>
           </label>
         )}
       </div>
@@ -143,7 +146,7 @@ export function ImagePicker({
           {error}
         </small>
       ) : (
-        <small className="form-hint" id={helpId}>
+        <small className="sr-only" id={helpId}>
           {labels.help}
         </small>
       )}

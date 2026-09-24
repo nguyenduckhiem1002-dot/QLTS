@@ -33,6 +33,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "prisma": "6.19.3",
+    "sharp": "0.35.4",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },

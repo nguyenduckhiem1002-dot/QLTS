@@ -49,7 +49,7 @@ export async function createAsset(formData: FormData) {
   const locationId = optional(formData, "locationId");
   const purchaseDate = parseDate(optional(formData, "purchaseDate"));
   const purchaseCost = parseCost(optional(formData, "purchaseCost"));
-  const [, image] = await Promise.all([permission, readImage(formData)]);
+  const [actor, image] = await Promise.all([permission, readImage(formData)]);
 
   if (!code || !name) {
     redirect("/assets/new?error=required");
@@ -92,6 +92,7 @@ export async function createAsset(formData: FormData) {
           entityType: "Asset",
           entityId: assetId,
           action: "CREATE",
+          actor: actor.email,
           payload: {
             code,
             name,
@@ -115,12 +116,12 @@ export async function createAsset(formData: FormData) {
 }
 
 export async function replaceAssetImage(formData: FormData) {
-  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
 
   if (isDemoMode()) {
     redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
   }
+  const actor = await requirePermission("assets:write");
 
   if (!assetId) return;
 
@@ -152,6 +153,7 @@ export async function replaceAssetImage(formData: FormData) {
         entityType: "Asset",
         entityId: assetId,
         action: "REPLACE_IMAGE",
+        actor: actor.email,
         payload: {
           fileName: image.fileName,
           mimeType: image.mimeType,
@@ -166,12 +168,12 @@ export async function replaceAssetImage(formData: FormData) {
 }
 
 export async function removeAssetImage(formData: FormData) {
-  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
 
   if (isDemoMode()) {
     redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
   }
+  const actor = await requirePermission("assets:write");
 
   if (!assetId) return;
 
@@ -182,6 +184,7 @@ export async function removeAssetImage(formData: FormData) {
         entityType: "Asset",
         entityId: assetId,
         action: "REMOVE_IMAGE",
+        actor: actor.email,
       },
     }),
   ]);
@@ -191,9 +194,9 @@ export async function removeAssetImage(formData: FormData) {
 }
 
 export async function assignAsset(formData: FormData) {
-  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
   if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
+  const actor = await requirePermission("assets:write");
 
   const employeeId = value(formData, "employeeId");
   const note = optional(formData, "note");
@@ -222,6 +225,7 @@ export async function assignAsset(formData: FormData) {
         entityType: "Asset",
         entityId: assetId,
         action: "ASSIGN",
+        actor: actor.email,
         payload: { employeeId, note },
       },
     }),
@@ -234,9 +238,9 @@ export async function assignAsset(formData: FormData) {
 }
 
 export async function returnAsset(formData: FormData) {
-  if (!isDemoMode()) await requirePermission("assets:write");
   const assetId = value(formData, "assetId");
   if (isDemoMode()) redirect(assetId ? `/assets/${assetId}?demo=readonly` : "/assets");
+  const actor = await requirePermission("assets:write");
   if (!assetId) return;
 
   const now = new Date();
@@ -258,6 +262,7 @@ export async function returnAsset(formData: FormData) {
         entityType: "Asset",
         entityId: assetId,
         action: "RETURN",
+        actor: actor.email,
       },
     }),
   ]);
@@ -283,7 +288,7 @@ function parseDate(raw: string | null) {
 
 function parseCost(raw: string | null) {
   if (!raw) return null;
-  const digits = raw.replace(/[^d]/g, "");
+  const digits = raw.replace(/\D/g, "");
   return digits ? new Prisma.Decimal(digits) : null;
 }
 
@@ -307,7 +312,7 @@ export async function updateAsset(formData: FormData) {
   if (!code || !name) redirect(`${editPath}?error=required`);
   if (!barcode || barcode.length > 80) redirect(`${editPath}?error=barcode`);
 
-  const [, current] = await Promise.all([
+  const [actor, current] = await Promise.all([
     requirePermission("assets:write"),
     db.asset.findUnique({
       where: { id: assetId },
@@ -347,6 +352,7 @@ export async function updateAsset(formData: FormData) {
           entityType: "Asset",
           entityId: assetId,
           action: "UPDATE",
+          actor: actor.email,
           payload: { code, name, status },
         },
       }),
@@ -369,7 +375,7 @@ export async function returnAssetToStorage(
   assetId: string,
 ): Promise<{ ok: true } | { ok: false; error: "readonly" | "not_found" }> {
   if (isDemoMode()) return { ok: false, error: "readonly" };
-  await requirePermission("assets:write");
+  const actor = await requirePermission("assets:write");
 
   try {
     await db.$transaction([
@@ -382,7 +388,7 @@ export async function returnAssetToStorage(
         data: { custodianId: null, status: AssetStatus.AVAILABLE },
       }),
       db.auditLog.create({
-        data: { entityType: "Asset", entityId: assetId, action: "RETURN" },
+        data: { entityType: "Asset", entityId: assetId, action: "RETURN", actor: actor.email },
       }),
     ]);
   } catch (error) {

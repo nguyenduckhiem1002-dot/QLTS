@@ -1,12 +1,12 @@
-import { ChevronRight, Tags } from "lucide-react";
+import { Pencil, Plus, Tags } from "lucide-react";
 import Link from "next/link";
 import { ConfirmSubmit } from "@/components/confirm-submit";
-import { SubmitButton } from "@/components/submit-button";
-import { EmptyState, FieldLabel, Notice, ReadonlyPanel } from "@/components/ui";
+import { EmptyState, Notice, ReadonlyNotice } from "@/components/ui";
 import { createCategory, deleteCategory, updateCategory } from "@/lib/actions/reference";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getCategories } from "@/lib/data";
+import { fill } from "@/lib/format";
 import { getTranslations, type TranslationKey } from "@/lib/i18n";
 import { isDemoMode } from "@/lib/runtime";
 
@@ -38,149 +38,161 @@ export default async function CategoriesPage({
   const demoMode = isDemoMode();
   const canManage = hasPermission(currentUser?.role, "reference:write");
   const locked = demoMode || !canManage;
-  const editing = canManage ? categories.find((category) => category.id === params.edit) : undefined;
+  const editingId = canManage && !demoMode ? params.edit : undefined;
   const saved = params.saved ? savedMessages[params.saved] : undefined;
   const error = params.error ? errorMessages[params.error] : undefined;
 
   return (
-    <section className="page">
-      <header className="page-header page-header-row">
+    <section className="page page-narrow">
+      <header className="page-head">
         <div>
           <h1>{t("categories.title")}</h1>
           <p>{t("categories.subtitle")}</p>
         </div>
-        <p className="header-count">
-          <strong>{categories.length}</strong> {t("categories.count")}
-        </p>
       </header>
 
       {saved ? <Notice tone="success">{t(saved)}</Notice> : null}
       {error ? <Notice tone="error">{t(error)}</Notice> : null}
+      {!canManage && !demoMode ? (
+        <ReadonlyNotice title={t("common.readonlyTitle")} message={t("common.readonlyMessage")} />
+      ) : null}
 
-      <div className="split-layout">
-        <section className="collection-surface" aria-label={t("categories.title")}>
-          {categories.length === 0 ? (
-            <EmptyState
-              icon={Tags}
-              title={t("categories.emptyTitle")}
-              description={locked ? undefined : t("categories.emptyHelp")}
-            />
-          ) : (
-            <>
-              <div className={`collection-heading${canManage ? " collection-heading-link" : ""}`}>
-                <span>{t("categories.name")}</span>
-                <span>{t("categories.assetCount")}</span>
-                {canManage ? <span aria-hidden="true" /> : null}
-              </div>
-              {categories.map((category) => {
-                const content = (
-                  <>
-                    <div>
-                      <h2>{category.name}</h2>
-                      {category.description ? <p>{category.description}</p> : null}
+      {/* Forms live outside the table; inputs join them through the form attribute. */}
+      <form id="category-add" action={createCategory} />
+      {editingId ? <form id="category-edit" action={updateCategory} /> : null}
+
+      <div className="surface">
+        <div className="surface-head">
+          <h2>{fill(t("categories.countLabel"), { n: categories.length })}</h2>
+        </div>
+        <div className="table-wrap">
+          <table className="ref-table">
+            <thead>
+              <tr>
+                <th>{t("categories.name")}</th>
+                <th>{t("categories.description")}</th>
+                <th className="num-col">{t("categories.assetCount")}</th>
+                {canManage ? (
+                  <th>
+                    <span className="sr-only">{t("users.actions")}</span>
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {canManage ? (
+                <tr className="ref-add">
+                  <td>
+                    <input
+                      form="category-add"
+                      name="name"
+                      required
+                      autoComplete="off"
+                      placeholder={t("categories.namePlaceholder")}
+                      aria-label={t("categories.name")}
+                      disabled={locked}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      form="category-add"
+                      name="description"
+                      autoComplete="off"
+                      placeholder={t("categories.descriptionPlaceholder")}
+                      aria-label={t("categories.description")}
+                      disabled={locked}
+                    />
+                  </td>
+                  <td />
+                  <td>
+                    <div className="ref-actions">
+                      <button className="btn btn-primary btn-sm" type="submit" form="category-add" disabled={locked}>
+                        <Plus size={15} aria-hidden="true" />
+                        {t("common.add")}
+                      </button>
                     </div>
-                    <strong className="collection-count">{category._count.assets}</strong>
-                  </>
-                );
-                return canManage ? (
-                  <Link
-                    key={category.id}
-                    href={`/categories?edit=${category.id}`}
-                    scroll={false}
-                    className={`collection-row collection-row-link${
-                      editing?.id === category.id ? " is-selected" : ""
-                    }`}
-                    aria-current={editing?.id === category.id ? "true" : undefined}
-                  >
-                    {content}
-                    <ChevronRight className="row-chevron" size={16} aria-hidden="true" />
-                  </Link>
-                ) : (
-                  <article className="collection-row" key={category.id}>
-                    {content}
-                  </article>
-                );
-              })}
-            </>
-          )}
-        </section>
+                  </td>
+                </tr>
+              ) : null}
 
-        {locked && !demoMode ? (
-          <ReadonlyPanel
-            title={t("common.readonlyTitle")}
-            message={t("common.readonlyMessage")}
+              {categories.map((category) =>
+                category.id === editingId ? (
+                  <tr className="ref-edit" key={category.id}>
+                    <td>
+                      <input form="category-edit" type="hidden" name="id" value={category.id} />
+                      <input
+                        form="category-edit"
+                        name="name"
+                        required
+                        autoFocus
+                        autoComplete="off"
+                        defaultValue={category.name}
+                        aria-label={t("categories.name")}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        form="category-edit"
+                        name="description"
+                        autoComplete="off"
+                        defaultValue={category.description ?? ""}
+                        aria-label={t("categories.description")}
+                      />
+                    </td>
+                    <td className="num-col num">{category._count.assets}</td>
+                    <td>
+                      <div className="ref-actions">
+                        <form action={deleteCategory}>
+                          <input type="hidden" name="id" value={category.id} />
+                          <ConfirmSubmit label={t("common.delete")} message={t("categories.deleteConfirm")} />
+                        </form>
+                        <Link className="btn btn-sm" href="/categories" scroll={false}>
+                          {t("common.cancel")}
+                        </Link>
+                        <button className="btn btn-primary btn-sm" type="submit" form="category-edit">
+                          {t("common.save")}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={category.id}>
+                    <td>
+                      <span className="cell-title">{category.name}</span>
+                    </td>
+                    <td className={category.description ? undefined : "cell-muted"}>
+                      {category.description ?? "-"}
+                    </td>
+                    <td className="num-col">
+                      <Link className="ref-count num" href={`/assets?category=${encodeURIComponent(category.name)}`}>
+                        {category._count.assets}
+                      </Link>
+                    </td>
+                    {canManage ? (
+                      <td>
+                        <div className="ref-actions">
+                          {locked ? null : (
+                            <Link className="btn btn-ghost btn-sm" href={`/categories?edit=${category.id}`} scroll={false}>
+                              <Pencil size={14} aria-hidden="true" />
+                              {t("common.edit")}
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </div>
+        {categories.length === 0 ? (
+          <EmptyState
+            icon={Tags}
+            title={t("categories.emptyTitle")}
+            description={locked ? undefined : t("categories.emptyHelp")}
           />
-        ) : (
-          <aside className="panel side-panel">
-            <form
-              key={editing?.id ?? "new"}
-              action={editing ? updateCategory : createCategory}
-              className="side-form"
-            >
-              {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
-              <header className="side-form-header">
-                <h2>{editing ? t("categories.edit") : t("categories.create")}</h2>
-                <p>{editing ? t("categories.editHelp") : t("categories.createHelp")}</p>
-              </header>
-
-              <div className="side-form-body">
-                <label>
-                  <FieldLabel required requiredLabel={t("common.required")}>
-                    {t("categories.name")}
-                  </FieldLabel>
-                  <input
-                    name="name"
-                    required
-                    autoComplete="off"
-                    defaultValue={editing?.name}
-                    placeholder={t("categories.namePlaceholder")}
-                    disabled={locked}
-                  />
-                </label>
-                <label>
-                  <FieldLabel optionalLabel={t("common.optional")}>
-                    {t("categories.description")}
-                  </FieldLabel>
-                  <textarea
-                    name="description"
-                    rows={3}
-                    defaultValue={editing?.description ?? ""}
-                    placeholder={t("categories.descriptionPlaceholder")}
-                    disabled={locked}
-                  />
-                </label>
-              </div>
-
-              <footer className="side-form-footer">
-                {editing ? (
-                  <div className="side-form-actions">
-                    <Link className="button button-secondary" href="/categories" scroll={false}>
-                      {t("common.cancel")}
-                    </Link>
-                    <SubmitButton className="button button-primary" disabled={locked} pendingLabel={t("common.saving")}>
-                      {t("common.saveChanges")}
-                    </SubmitButton>
-                  </div>
-                ) : (
-                  <SubmitButton className="button button-primary button-block" disabled={locked} pendingLabel={t("common.saving")}>
-                    {t("categories.create")}
-                  </SubmitButton>
-                )}
-              </footer>
-            </form>
-
-            {editing ? (
-              <form action={deleteCategory} className="side-form-danger">
-                <input type="hidden" name="id" value={editing.id} />
-                <ConfirmSubmit
-                  label={t("common.delete")}
-                  message={t("categories.deleteConfirm")}
-                  disabled={locked}
-                />
-              </form>
-            ) : null}
-          </aside>
-        )}
+        ) : null}
       </div>
     </section>
   );

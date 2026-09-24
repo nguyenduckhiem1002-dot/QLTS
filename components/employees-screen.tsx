@@ -165,56 +165,56 @@ export function EmployeesScreen({
           </p>
         </div>
         {canManage ? (
-          <button className="button button-primary" type="button" onClick={() => setDialog({ mode: "add" })}>
+          <button className="btn btn-primary" type="button" onClick={() => setDialog({ mode: "add" })}>
             <Plus size={16} aria-hidden="true" />
             {l.add}
           </button>
         ) : null}
       </div>
 
-      <div className="emp-toolbar">
-        <label className="emp-search">
-          <Search size={16} aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={l.search}
-            aria-label={l.searchLabel}
-          />
-        </label>
-        <div className="emp-chips" role="group" aria-label={l.deptFilter}>
-          <button className="emp-chip" type="button" aria-pressed={dept === ALL} onClick={() => setDept(ALL)}>
-            {l.all}
-            <span>{employees.length}</span>
-          </button>
-          {deptCounts.map(([key, count]) => (
-            <button
-              key={key}
-              className="emp-chip"
-              type="button"
-              aria-pressed={dept === key}
-              onClick={() => setDept(key)}
-            >
-              {key === NO_DEPT ? l.noDept : key}
-              <span>{count}</span>
-            </button>
-          ))}
-        </div>
-        <select
-          className="emp-sort"
-          value={sort}
-          onChange={(event) => setSort(event.target.value as SortKey)}
-          aria-label={l.sortLabel}
-        >
-          <option value="given">{l.sortGiven}</option>
-          <option value="code">{l.sortCode}</option>
-          <option value="holds">{l.sortHolds}</option>
-        </select>
-      </div>
-
       <div className="emp-layout">
-        <div className="emp-list" role="listbox" aria-label={l.colEmployee}>
+        <div className="surface emp-list">
+          <div className="emp-toolbar">
+            <label className="search-box">
+              <Search size={16} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={l.search}
+                aria-label={l.searchLabel}
+              />
+            </label>
+            <div className="emp-chips" role="group" aria-label={l.deptFilter}>
+              <button className="chip" type="button" aria-pressed={dept === ALL} onClick={() => setDept(ALL)}>
+                {l.all}
+                <span>{employees.length}</span>
+              </button>
+              {deptCounts.map(([key, count]) => (
+                <button
+                  key={key}
+                  className="chip"
+                  type="button"
+                  aria-pressed={dept === key}
+                  onClick={() => setDept(key)}
+                >
+                  {key === NO_DEPT ? l.noDept : key}
+                  <span>{count}</span>
+                </button>
+              ))}
+            </div>
+            <select
+              className="emp-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as SortKey)}
+              aria-label={l.sortLabel}
+            >
+              <option value="given">{l.sortGiven}</option>
+              <option value="code">{l.sortCode}</option>
+              <option value="holds">{l.sortHolds}</option>
+            </select>
+          </div>
+          <div className="emp-rows" role="listbox" aria-label={l.colEmployee}>
           <div className="emp-row emp-head" role="presentation">
             <span>{l.colEmployee}</span>
             <span>{l.colCode}</span>
@@ -240,7 +240,7 @@ export function EmployeesScreen({
                 onClick={() => select(employee.id)}
               >
                 <span className="emp-who">
-                  <span className="emp-av" aria-hidden="true">
+                  <span className="avatar" aria-hidden="true">
                     {getInitials(employee.name)}
                   </span>
                   <span className="emp-who-text">
@@ -256,7 +256,7 @@ export function EmployeesScreen({
                   {employee.assets.length ? (
                     <>
                       {employee.assets.slice(0, 2).map((asset) => (
-                        <span className="mini-tag" key={asset.id}>
+                        <span className="tag" key={asset.id}>
                           {asset.code}
                         </span>
                       ))}
@@ -271,17 +271,18 @@ export function EmployeesScreen({
               </button>
             ))
           )}
+          </div>
         </div>
 
         <aside
           ref={panelRef}
-          className={`emp-panel${selected ? "" : " is-idle"}`}
+          className={`surface emp-panel${selected ? "" : " is-idle"}`}
           aria-live="polite"
         >
           {selected ? (
             <>
               <div className="emp-p-head">
-                <span className="emp-av emp-av-lg" aria-hidden="true">
+                <span className="avatar avatar-lg" aria-hidden="true">
                   {getInitials(selected.name)}
                 </span>
                 <div>
@@ -300,7 +301,7 @@ export function EmployeesScreen({
                 <ul className="emp-assets">
                   {selected.assets.map((asset) => (
                     <li key={asset.id}>
-                      <span className="mini-tag">{asset.code}</span>
+                      <span className="tag">{asset.code}</span>
                       <Link className="emp-asset-text" href={`/assets/${asset.id}`}>
                         <span>{asset.name}</span>
                         {asset.since ? (
@@ -321,7 +322,7 @@ export function EmployeesScreen({
               {canManage ? (
                 <div className="emp-p-actions">
                   <button
-                    className="button button-secondary"
+                    className="btn"
                     type="button"
                     onClick={() => setDialog({ mode: "edit", id: selected.id })}
                   >
@@ -372,7 +373,7 @@ export function EmployeesScreen({
         />
       ) : null}
 
-      <div className={`emp-toast${toast ? " is-shown" : ""}`} role="status" aria-live="polite">
+      <div className={`toast${toast ? " is-shown" : ""}`} role="status" aria-live="polite">
         {toast}
       </div>
     </div>
@@ -563,10 +564,10 @@ function EmployeeDialog({
             </button>
           ) : null}
           <span className="emp-d-spacer" />
-          <button className="button button-secondary" type="button" onClick={() => ref.current?.close()}>
+          <button className="btn" type="button" onClick={() => ref.current?.close()}>
             {l.cancel}
           </button>
-          <button className="button button-primary" type="submit" disabled={Boolean(clash) || pending !== null}>
+          <button className="btn btn-primary" type="submit" disabled={Boolean(clash) || pending !== null}>
             {pending === "save" ? l.saving : editing ? l.save : l.add}
           </button>
         </div>

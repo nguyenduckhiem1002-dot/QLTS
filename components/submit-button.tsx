@@ -7,7 +7,7 @@ import { useFormStatus } from "react-dom";
 export function SubmitButton({
   children,
   pendingLabel,
-  className = "button button-primary",
+  className = "btn btn-primary",
   disabled,
 }: {
   children: React.ReactNode;

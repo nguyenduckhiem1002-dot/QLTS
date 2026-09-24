@@ -1,6 +1,7 @@
 import { LogOut } from "lucide-react";
 import { redirect } from "next/navigation";
-import { SidebarNav } from "@/components/sidebar-nav";
+import { MobileRail, SidebarNav, type NavLabels } from "@/components/sidebar-nav";
+import { Topbar } from "@/components/topbar";
 import { logout } from "@/lib/actions/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { requireUser } from "@/lib/auth/session";
@@ -22,81 +23,81 @@ export default async function DashboardLayout({
     redirect("/account/password");
   }
 
+  const navLabels: NavLabels = {
+    dashboard: t("nav.dashboard"),
+    assets: t("nav.assets"),
+    employees: t("nav.employees"),
+    categories: t("nav.categories"),
+    locations: t("nav.locations"),
+    users: t("nav.users"),
+    settings: t("nav.settings"),
+    groupOps: t("nav.groupOps"),
+    groupData: t("nav.groupData"),
+    groupAdmin: t("nav.groupAdmin"),
+  };
+  const showUsers = hasPermission(user.role, "users:manage");
+
+  const logoutButton = demoMode ? null : (
+    <form action={logout}>
+      <button type="submit" className="icon-button" title={t("common.logout")} aria-label={t("common.logout")}>
+        <LogOut size={17} aria-hidden="true" />
+      </button>
+    </form>
+  );
+
   return (
-    <div className="app-shell">
+    <div className="shell">
       <aside className="sidebar">
-        <div className="brand casla-brand">
-          <img
-            className="brand-logo brand-logo-full"
-            src="/casla-logo-white-compact.svg"
-            alt="Casla"
-          />
-          <img
-            className="brand-logo brand-logo-mark"
-            src="/casla-mark.svg"
-            alt=""
-            aria-hidden="true"
-          />
-          <div className="brand-copy">
-            <strong>{t("app.name")}</strong>
-            <span>{t("app.subtitle")}</span>
-          </div>
+        <div className="sidebar-brand">
+          <img src="/casla-logo-white-compact.svg" alt="Casla" width={118} height={38} />
+          <span>{t("app.name")}</span>
         </div>
 
-        <SidebarNav
-          labels={{
-            dashboard: t("nav.dashboard"),
-            assets: t("nav.assets"),
-            categories: t("nav.categories"),
-            locations: t("nav.locations"),
-            employees: t("nav.employees"),
-            users: t("nav.users"),
-            settings: t("nav.settings"),
-          }}
-          showUsers={hasPermission(user.role, "users:manage")}
-        />
+        <SidebarNav labels={navLabels} showUsers={showUsers} />
 
         <div className="sidebar-account">
-          <span className="sidebar-avatar" aria-hidden="true">
+          <span className="avatar" aria-hidden="true">
             {getInitials(user.name)}
           </span>
           <div className="sidebar-account-copy">
             <strong>{user.name}</strong>
             <span>{t(`role.${user.role}`)}</span>
           </div>
-          {!demoMode ? (
-            <form action={logout}>
-              <button
-                type="submit"
-                className="sidebar-logout"
-                title={t("common.logout")}
-                aria-label={t("common.logout")}
-              >
-                <LogOut size={17} />
-              </button>
-            </form>
-          ) : null}
+          {logoutButton}
         </div>
-
-        {demoMode ? (
-          <div className="sidebar-footer">
-            <div>
-              <strong>{t("demo.badge")}</strong>
-              <span>{t("demo.short")}</span>
-            </div>
-          </div>
-        ) : null}
       </aside>
 
-      <main id="main-content" className="main-content">
+      <div className="main">
+        <MobileRail labels={navLabels} showUsers={showUsers}>
+          {logoutButton}
+        </MobileRail>
         {demoMode ? (
           <div className="demo-banner" role="status">
             <strong>{t("demo.badge")}</strong>
             <span>{t("demo.message")}</span>
           </div>
         ) : null}
-        {children}
-      </main>
+        <Topbar
+          labels={{
+            dashboard: t("nav.dashboard"),
+            assets: t("nav.assets"),
+            employees: t("nav.employees"),
+            categories: t("nav.categories"),
+            locations: t("nav.locations"),
+            users: t("nav.users"),
+            settings: t("nav.settings"),
+            newAsset: t("assets.createTitle"),
+            assetDetail: t("assets.details"),
+            editAsset: t("assets.edit"),
+            labels: t("labels.title"),
+            search: t("search.placeholder"),
+            searchLabel: t("search.label"),
+          }}
+        />
+        <main id="main-content" className="page-host">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
